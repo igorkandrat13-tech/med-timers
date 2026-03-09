@@ -54,8 +54,14 @@ if [[ -n "$GIT_REPO" ]]; then
     git pull
   elif [ -d "$TARGET_DIR" ]; then
     echo "Directory $TARGET_DIR exists but is not a git repo. Backing up..."
-    mv "$TARGET_DIR" "${TARGET_DIR}_backup_$(date +%s)"
+    BACKUP_DIR="${TARGET_DIR}_backup_$(date +%s)"
+    mv "$TARGET_DIR" "$BACKUP_DIR"
     git clone "$GIT_REPO" "$TARGET_DIR"
+    
+    # Restore data files if they exist
+    echo "Restoring data files from backup..."
+    [ -f "$BACKUP_DIR/timers_log.csv" ] && cp "$BACKUP_DIR/timers_log.csv" "$TARGET_DIR/"
+    [ -f "$BACKUP_DIR/procedures.json" ] && cp "$BACKUP_DIR/procedures.json" "$TARGET_DIR/"
   else
     echo "Cloning $GIT_REPO into $TARGET_DIR..."
     mkdir -p "$(dirname "$TARGET_DIR")"

@@ -3,6 +3,7 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = 3000;
@@ -55,6 +56,56 @@ app.get('/api/server-info', (req, res) => {
         protocol: req.protocol,
         host: req.headers.host,
         ips
+    });
+});
+
+// ==================== GIT ОБНОВЛЕНИЯ ====================
+
+// Проверка обновлений (fetch и статус)
+app.get('/api/updates/check', (req, res) => {
+    exec('git fetch', (err) => {
+        if (err) {
+            console.error('Git fetch error:', err);
+            return res.json({ available: false, error: 'Git fetch failed' });
+        }
+        
+        // Проверяем, сколько коммитов позади
+        exec('git rev-list HEAD...origin/main --count', (err, stdout) => {
+            if (err) {
+                // Если origin/main нет, пробуем origin/master
+                 exec('git rev-list HEAD...origin/master --count', (err2, stdout2) => {
+                     if (err2) {
+                         console.error('Git rev-list error:', err2);
+                         return res.json({ available: false, error: 'Git check failed' });
+                     }
+                     const count = parseInt(stdout2.trim());
+                     res.json({ available: count > 0, count });
+                 });
+                 return;
+            }
+            const count = parseInt(stdout.trim());
+            res.json({ available: count > 0, count });
+        });
+    });
+});
+
+// Установка обновлений (pull)
+app.post('/api/updates/pull', (req, res) => {
+    exec('git pull', (err, stdout, stderr) => {
+        if (err) {
+            console.error('Git pull error:', err);
+            return res.status(500).json({ error: 'Update failed', details: stderr });
+        }
+        console.log('Update successful:', stdout);
+        
+        // Перезапуск сервера (для systemd: exit 1 вызовет рестарт, если Restart=on-failure)
+        // Но дадим клиенту ответ перед выходом
+        res.json({ success: true, message: 'Updated successfully. Restarting server...' });
+        
+        setTimeout(() => {
+            console.log('Restarting process...');
+            process.exit(1); 
+        }, 1000);
     });
 });
 

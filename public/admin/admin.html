@@ -15,6 +15,7 @@
   <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
   <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
   <!-- Кнопка смены темы -->
+  <button class="btn btn-download" id="check-updates-btn">⬇️ Проверить обновления</button>
   <button id="theme-toggle-admin" class="btn-theme-toggle" title="Переключить тему">🌙</button>
 </div>
   </header>
@@ -193,7 +194,21 @@
   </div>
 </div>
 
+<!-- Модальное окно обновлений -->
+<div id="updates-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-updates">&times;</span>
+        <h2>🔄 Обновление системы</h2>
+        <div id="updates-status" style="margin: 20px 0; font-size: 1.1em;"></div>
+        <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="update-confirm-btn" class="btn btn-add" style="display: none;">⬇️ Скачать и обновить</button>
+            <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
+        </div>
+    </div>
+</div>
+
 <script type="module" src="js/admin-app.js"></script>
+<script type="module" src="js/admin-updates.js"></script>
 <script type="module" src="js/admin-theme.js"></script>
 <script src="/shared/js/qrcode.min.js"></script>
 <script type="module" src="js/admin-qr.js"></script>

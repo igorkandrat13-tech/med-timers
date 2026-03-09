@@ -441,6 +441,30 @@ tr:last-child td {
   50% { opacity: 0.5; }
 }
 
+/* ==================== UPDATES MODAL ==================== */
+#updates-modal .modal-content {
+    max-width: 500px;
+    text-align: center;
+}
+
+#updates-status {
+    padding: 20px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.updates-loading::after {
+    content: " ⏳";
+    animation: spin 1s infinite linear;
+    display: inline-block;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .header { flex-direction: column; text-align: center; }
