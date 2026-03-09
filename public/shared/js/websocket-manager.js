@@ -16,6 +16,13 @@ export class WebSocketManager {
         let url = `${protocol}//${window.location.host}?role=${this.role}`;
         if (this.bedId) url += `&bed=${this.bedId}`;
 
+        // Если хост содержит med-timers.westa.by, но мы используем ws, форсируем wss
+        // Это костыль для ситуации, когда браузер может быть в смешанном режиме,
+        // но вообще, window.location.protocol должен отражать реальность
+        if (window.location.host.includes('med-timers.westa.by') && protocol === 'ws:') {
+             url = url.replace('ws:', 'wss:');
+        }
+
         this.ws = new WebSocket(url);
 
         this.ws.onopen = () => {
