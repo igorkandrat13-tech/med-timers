@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Планшет врача | Медкабинет</title>
+    <link rel="stylesheet" href="css/doctor-design.css">
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('service-worker.js')
+            .then((registration) => {
+              console.log('✅ ServiceWorker зарегистрирован для планшета врача');
+            })
+            .catch((error) => {
+              console.error('❌ Ошибка регистрации ServiceWorker:', error);
+            });
+        });
+      }
+    </script>
+</head>
+<body>
+<header class="header">
+    <h1>💊 Планшет врача | Медкабинет</h1>
+    
+    <!-- Левая группа: Статус и Обновить -->
+    <div class="header-actions">
+        <span id="connection-status">Подключение...</span>
+        <button class="btn btn-refresh" onclick="window.loadProcedures()">🔄 Обновить процедуры</button>
+    </div>
+
+    <!-- Правая группа: Звук и Тема (Обязательно в этом контейнере!) -->
+    <div class="header-controls-right">
+        <!-- Кнопка звука -->
+        <button id="sound-toggle-doctor" class="btn-theme-toggle" title="Вкл/Выкл звук">🔊</button>
+        <!-- Кнопка темы -->
+        <button id="theme-toggle-doctor" class="btn-theme-toggle" title="Переключить тему">🌙</button>
+    </div>
+</header>
+
+    <div class="procedure-selector">
+    <label for="global-procedure-select">Выберите процедуру:</label>
+    <select id="global-procedure-select">
+        <option value="">-- Выберите процедуру --</option>
+        <!-- Опции будут добавлены через JS -->
+    </select>
+</div>
+
+<main class="main">
+    <div class="beds-grid" id="beds-grid">
+        <!-- Сетка коек будет отрисована через JS -->
+    </div>
+
+    <aside class="control-panel" id="control-panel">
+        <div class="selection-info" id="selection-info">
+            <p>Выберите койку</p>
+        </div>
+        <div class="selected-bed-details" id="selected-bed-details" style="display: none;">
+            <h3 id="selected-bed">Койка #N</h3>
+            <div class="info-row">
+                <span>Статус:</span>
+                <span id="info-status">-</span>
+            </div>
+            <div class="info-row">
+                <span>Процедура:</span>
+                <span id="sidebar-procedure-name">-</span>
+            </div>
+            <div class="info-row">
+                <span>Длительность:</span>
+                <span id="info-duration">-</span>
+            </div>
+            <div class="timer-display">
+                <span id="sidebar-timer">00:00</span>
+            </div>
+            <div class="bed-controls" id="bed-controls-sidebar">
+                <!-- Кнопки будут добавлены через JS -->
+            </div>
+        </div>
+    </aside>
+</main>
+
+<!-- Уведомление о завершении -->
+<div id="completion-notification" class="completion-notification" style="display: none;">
+    <span id="completion-text"></span>
+    <button onclick="window.closeCompletionNotification()">×</button>
+</div>
+
+<!-- 🆕 Правая панель — Журнал событий -->
+<aside class="sidebar-right">
+    <div class="events-header">
+        <h3>📋 Журнал событий</h3>
+        <button class="btn-clear" onclick="window.clearEventsLog()">🗑️ Очистить</button>
+    </div>
+    <div id="events-list" class="events-list"></div>
+</aside>
+
+<!-- 🆕 Скрытый аудиоплеер для системного звука -->
+<audio id="alarm-audio" preload="auto" style="display: none;">
+    <source src="/sounds/beep.mp3" type="audio/mpeg">
+    Ваш браузер не поддерживает аудио.
+</audio>
+
+<script type="module" src="js/doctor-utils.js"></script>
+<script type="module" src="js/doctor-alarms.js"></script>
+<script type="module" src="js/doctor-websocket.js"></script>
+<script type="module" src="js/doctor-procedures.js"></script>
+<script type="module" src="js/doctor-timers.js"></script>
+<script type="module" src="js/doctor-theme.js"></script>
+</body>
+</html>

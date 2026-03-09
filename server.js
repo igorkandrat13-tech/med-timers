@@ -1,0 +1,506 @@
+const express = require('express');
+const WebSocket = require('ws');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const app = express();
+const PORT = 3000;
+const MAX_BEDS = 14; // Настройка количества коек
+
+// CORS для локального тестирования
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+// Парсинг JSON
+app.use(express.json());
+
+// Статические файлы
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get(['/doctor', '/tablet'], (req, res) => {
+    res.redirect('/doctor/doctor.html');
+});
+
+app.get('/admin', (req, res) => {
+    res.redirect('/admin/admin.html');
+});
+
+app.get('/', (req, res) => {
+    res.redirect('/doctor/doctor.html');
+});
+
+// Служебная информация о сервере (для QR)
+app.get('/api/server-info', (req, res) => {
+    const nets = os.networkInterfaces();
+    const ips = [];
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            ips.push({
+                interface: name,
+                address: net.address,
+                family: net.family,
+                internal: net.internal
+            });
+        }
+    }
+    res.json({
+        protocol: req.protocol,
+        host: req.headers.host,
+        ips
+    });
+});
+
+// ==================== ХРАНЕНИЕ ДАННЫХ ====================
+
+// Журнал таймеров
+const logFile = path.join(__dirname, 'timers_log.csv');
+
+// Инициализация журнала
+if (!fs.existsSync(logFile)) {
+    fs.writeFileSync(logFile, 'Дата,Время,Койка,Событие,Длительность,Оператор,Процедура\n');
+}
+
+// Вспомогательная функция логирования
+function logEvent(bedId, event, duration, operator, procedureName) {
+    const timestamp = new Date().toLocaleString('ru-RU');
+    const [date, time] = timestamp.split(', ');
+    fs.appendFileSync(logFile, `${date},${time},${bedId},${event},${duration},${operator},${procedureName || '-'}\n`);
+}
+
+// Справочник процедур
+const proceduresFile = path.join(__dirname, 'procedures.json');
+let procedures = [
+    { id: 1, name: 'Электрофорез', duration: 15, active: true },
+    { id: 2, name: 'Магнитотерапия', duration: 20, active: true },
+    { id: 3, name: 'УВЧ-терапия', duration: 10, active: true },
+    { id: 4, name: 'Лазеротерапия', duration: 12, active: true },
+    { id: 5, name: 'Дарсонвализация', duration: 8, active: true }
+];
+
+if (fs.existsSync(proceduresFile)) {
+    try {
+        procedures = JSON.parse(fs.readFileSync(proceduresFile, 'utf8'));
+        console.log('✅ Справочник процедур загружен из файла');
+    } catch (e) {
+        console.error('⚠️ Ошибка загрузки процедур, используется стандартный справочник');
+    }
+} else {
+    fs.writeFileSync(proceduresFile, JSON.stringify(procedures, null, 2));
+    console.log('✅ Создан стандартный справочник процедур');
+}
+
+function saveProceduresToFile() {
+    try {
+        fs.writeFileSync(proceduresFile, JSON.stringify(procedures, null, 2));
+        console.log('💾 Справочник процедур сохранён');
+    } catch (e) {
+        console.error('❌ Ошибка сохранения процедур:', e.message);
+    }
+}
+
+// Хранилище состояний таймеров (MAX_BEDS коек, индекс 1-MAX_BEDS)
+const beds = Array(MAX_BEDS + 1).fill(null).map(() => ({
+    status: 'idle',
+    endTime: null,
+    duration: 0,
+    startedAt: null,
+    procedureName: null,
+    remainingTime: 0,
+    currentStageIndex: null,
+    stages: []
+}));
+
+// ==================== API ДЛЯ УПРАВЛЕНИЯ КОЙКАМИ ====================
+
+app.post('/api/control', (req, res) => {
+    const { bed, action, minutes, operator = 'system', procedureName = null } = req.body;
+    const bedId = parseInt(bed);
+    
+    if (bedId < 1 || bedId > MAX_BEDS) {
+        return res.status(400).json({ error: 'Неверный номер койки' });
+    }
+
+    const bedData = beds[bedId];
+    if (!bedData) {
+        return res.status(400).json({ error: 'Койка не найдена' });
+    }
+
+    try {
+        switch (action) {
+            case 'start':
+                if (bedData.status !== 'idle') {
+                    return res.status(400).json({ error: 'Койка занята' });
+                }
+
+                const proc = procedures.find(p => p.name === procedureName);
+                let duration = minutes;
+                let currentStageIndex = 0;
+                let stages = [];
+
+                if (proc && Array.isArray(proc.stages) && proc.stages.length > 0) {
+                    duration = proc.stages[0]?.duration || minutes;
+                    currentStageIndex = 0;
+                    stages = proc.stages;
+                }
+
+                const endTime = Date.now() + (duration * 60 * 1000);
+
+                beds[bedId] = {
+                    status: 'running',
+                    endTime: endTime,
+                    duration: duration,
+                    startedAt: Date.now(),
+                    procedureName: procedureName,
+                    remainingTime: 0,
+                    currentStageIndex: currentStageIndex,
+                    stages: stages
+                };
+
+                logEvent(bedId, 'Старт', duration, operator, procedureName);
+                break;
+
+            case 'pause':
+                if (bedData.status !== 'running') {
+                    return res.status(400).json({ error: 'Таймер не запущен' });
+                }
+                beds[bedId] = {
+                    ...bedData,
+                    status: 'paused',
+                    remainingTime: bedData.endTime - Date.now()
+                };
+                logEvent(bedId, 'Пауза', Math.round(bedData.remainingTime / 60000), operator, bedData.procedureName);
+                break;
+
+            case 'resume':
+              if (bedData.status !== 'paused') {
+                  return res.status(400).json({ error: 'Таймер не на паузе' });
+              }
+
+              if (bedData.remainingTime > 0) {
+                  beds[bedId] = {
+                      ...bedData,
+                      status: 'running',
+                      endTime: Date.now() + bedData.remainingTime,
+                      remainingTime: 0
+                  };
+                  logEvent(bedId, 'Продолжить', Math.round(bedData.remainingTime / 60000), operator, bedData.procedureName);
+              } else {
+                  return res.status(400).json({ error: 'Невозможно продолжить: этап завершён. Используйте «Следующий этап».' });
+              }
+              break;
+
+            case 'stop':
+                if (bedData.status !== 'running' && bedData.status !== 'paused') {
+                    return res.status(400).json({ error: 'Таймер не запущен' });
+                }
+                const stopDuration = bedData.duration;
+                const stopProc = bedData.procedureName;
+                
+                beds[bedId] = {
+                    status: 'idle',
+                    endTime: null,
+                    duration: 0,
+                    startedAt: null,
+                    procedureName: null,
+                    remainingTime: 0,
+                    currentStageIndex: null,
+                    stages: []
+                };
+                logEvent(bedId, 'Стоп', stopDuration, operator, stopProc);
+                break;
+
+            case 'reset':
+                const resetDuration = bedData.duration;
+                const resetProc = bedData.procedureName;
+                
+                beds[bedId] = {
+                    status: 'idle',
+                    endTime: null,
+                    duration: 0,
+                    startedAt: null,
+                    procedureName: null,
+                    remainingTime: 0,
+                    currentStageIndex: null,
+                    stages: []
+                };
+                logEvent(bedId, 'Сброс', resetDuration, operator, resetProc);
+                break;
+
+            case 'next_stage':
+                if (bedData.status !== 'paused') {
+                    return res.status(400).json({ error: 'Только на паузе можно перейти к следующему этапу' });
+                }
+
+                const proc2 = procedures.find(p => p.name === bedData.procedureName);
+                if (!proc2 || !Array.isArray(proc2.stages) || proc2.stages.length === 0) {
+                    return res.status(400).json({ error: 'Процедура не имеет этапов' });
+                }
+
+                const nextIndex = (bedData.currentStageIndex || 0) + 1;
+                if (nextIndex >= proc2.stages.length) {
+                    return res.status(400).json({ error: 'Это последний этап' });
+                }
+
+                const nextStage = proc2.stages[nextIndex];
+                const nextDuration = nextStage.duration || 5;
+                const nextEndTime = Date.now() + (nextDuration * 60 * 1000);
+
+                beds[bedId] = {
+                    ...bedData,
+                    status: 'running',
+                    endTime: nextEndTime,
+                    duration: nextDuration,
+                    currentStageIndex: nextIndex,
+                    remainingTime: 0
+                };
+
+                logEvent(bedId, 'Следующий этап', nextDuration, operator, procedureName);
+                break;
+
+            default:
+                return res.status(400).json({ error: 'Неизвестное действие' });
+        }
+
+        broadcastUpdate();
+        res.json({ success: true, state: beds[bedId] });
+    } catch (e) {
+        console.error('Error in /api/control:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/state', (req, res) => {
+    res.json({ beds: beds.slice(1, MAX_BEDS + 1) });
+});
+
+// ==================== API ДЛЯ СПРАВОЧНИКА ПРОЦЕДУР ====================
+
+app.get('/api/procedures', (req, res) => {
+    res.json(procedures);
+});
+
+app.get('/api/procedures/active', (req, res) => {
+    const activeProcs = procedures.filter(p => p.active);
+    res.json(activeProcs);
+});
+
+function broadcastProcedures() {
+    const payload = JSON.stringify({ type: 'procedures_updated', procedures });
+    broadcastToRole(['admin', 'doctor'], payload);
+}
+
+app.post('/api/procedures', (req, res) => {
+    const { name, duration, stages } = req.body;
+    if (!name || !duration) {
+        return res.status(400).json({ error: 'Название и длительность обязательны' });
+    }
+
+    const maxId = procedures.length > 0 ? Math.max(...procedures.map(p => p.id)) : 0;
+    const newProcedure = {
+        id: maxId + 1,
+        name: name.trim(),
+        duration: parseFloat(duration) || 0,
+        active: true,
+        createdAt: new Date().toISOString()
+    };
+
+    if (Array.isArray(stages) && stages.length > 0) {
+        newProcedure.stages = stages;
+    }
+
+    procedures.push(newProcedure);
+    saveProceduresToFile();
+    res.json({ success: true, procedure: newProcedure });
+    broadcastProcedures();
+});
+
+app.put('/api/procedures/:id', (req, res) => {
+    const procedureId = parseInt(req.params.id);
+    const { name, duration, active, stages } = req.body;
+    const index = procedures.findIndex(p => p.id === procedureId);
+    if (index === -1) {
+        return res.status(404).json({ error: 'Процедура не найдена' });
+    }
+
+    if (name !== undefined) procedures[index].name = name.trim();
+    if (duration !== undefined) procedures[index].duration = parseFloat(duration) || 0;
+    if (active !== undefined) procedures[index].active = active;
+
+    if (stages !== undefined) {
+        if (Array.isArray(stages) && stages.length > 0) {
+            procedures[index].stages = stages;
+        } else {
+            delete procedures[index].stages;
+        }
+    }
+
+    saveProceduresToFile();
+    res.json({ success: true, procedure: procedures[index] });
+    broadcastProcedures();
+});
+
+app.delete('/api/procedures/:id', (req, res) => {
+    const procedureId = parseInt(req.params.id);
+    const proc = procedures.find(p => p.id === procedureId);
+    if (!proc) {
+        return res.status(404).json({ error: 'Процедура не найдена' });
+    }
+    proc.active = false;
+    saveProceduresToFile();
+    res.json({ success: true });
+    broadcastProcedures();
+});
+
+// Скачать журнал
+app.get('/timers_log.csv', (req, res) => {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=timers_log.csv');
+    res.sendFile(logFile);
+});
+
+// ==================== WEBSOCKET СЕРВЕР ====================
+
+const wss = new WebSocket.Server({ noServer: true });
+const clients = new Map(); // ws -> { bedId, role }
+
+wss.on('connection', (ws, req) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const bedId = parseInt(url.searchParams.get('bed'));
+    const role = url.searchParams.get('role');
+
+    clients.set(ws, { bedId, role });
+
+    // Отправляем начальное состояние
+    if (role === 'admin' || role === 'doctor') {
+        ws.send(JSON.stringify({
+            type: 'state',
+            beds: beds.slice(1, MAX_BEDS + 1)
+        }));
+        ws.send(JSON.stringify({
+            type: 'procedures_updated',
+            procedures: procedures
+        }));
+    } else if (bedId >= 1 && bedId <= MAX_BEDS) {
+        ws.send(JSON.stringify({
+            type: 'state',
+            ...beds[bedId]
+        }));
+    }
+
+    ws.on('close', () => clients.delete(ws));
+    ws.on('error', console.error);
+});
+
+// ==================== ОБНОВЛЕНИЕ ТАЙМЕРОВ ====================
+
+function broadcastToRole(roles, payload) {
+    clients.forEach((info, ws) => {
+        if (ws.readyState === WebSocket.OPEN && roles.includes(info.role)) {
+            ws.send(payload);
+        }
+    });
+}
+
+function broadcastToBed(bedId, payload) {
+    clients.forEach((info, ws) => {
+        if (ws.readyState === WebSocket.OPEN && info.bedId === bedId) {
+            ws.send(payload);
+        }
+    });
+}
+
+function broadcastUpdate() {
+    const payload = JSON.stringify({
+        type: 'update_all',
+        beds: beds.slice(1, MAX_BEDS + 1)
+    });
+    
+    clients.forEach((info, ws) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(payload);
+        }
+    });
+}
+
+// Отправка обновления каждую секунду
+setInterval(() => {
+    const now = Date.now();
+    const currentBeds = beds.slice(1, MAX_BEDS + 1);
+
+    // Тик таймера для админов и врачей
+    const timePayload = JSON.stringify({
+        type: 'time_update',
+        serverTime: now,
+        beds: currentBeds
+    });
+    broadcastToRole(['admin', 'doctor'], timePayload);
+
+    // Обновляем состояние сервера и проверяем завершение
+    for (let i = 1; i <= MAX_BEDS; i++) {
+        const bed = beds[i];
+        if (!bed || bed.status !== 'running' || !bed.endTime) continue;
+
+        const diff = bed.endTime - now;
+
+        if (diff <= 0) {
+            const proc = procedures.find(p => p.name === bed.procedureName);
+            const isMultiStage = proc && Array.isArray(proc.stages) && proc.stages.length > 0;
+
+            if (isMultiStage) {
+                const nextIndex = (bed.currentStageIndex || 0) + 1;
+                const totalStages = proc.stages.length;
+
+                if (nextIndex < totalStages) {
+                    bed.status = 'paused';
+                    bed.remainingTime = 0;
+
+                    const stagePayload = JSON.stringify({
+                        type: 'stage_completed',
+                        bedId: i,
+                        currentStageIndex: bed.currentStageIndex,
+                        totalStages: totalStages
+                    });
+
+                    broadcastToBed(i, stagePayload);
+                    broadcastToRole(['admin', 'doctor'], stagePayload);
+                    logEvent(i, 'Этап завершён', bed.duration, 'system', bed.procedureName);
+                } else {
+                    bed.status = 'completed';
+                    const completedPayload = JSON.stringify({ type: 'completed', bedId: i });
+                    broadcastToBed(i, completedPayload);
+                    broadcastToRole(['admin', 'doctor'], completedPayload);
+                    logEvent(i, 'Завершено', bed.duration, 'system', bed.procedureName);
+                }
+            } else {
+                bed.status = 'completed';
+                const completedPayload = JSON.stringify({ type: 'completed', bedId: i });
+                broadcastToBed(i, completedPayload);
+                broadcastToRole(['admin', 'doctor'], completedPayload);
+                logEvent(i, 'Завершено', bed.duration, 'system', bed.procedureName);
+            }
+            broadcastUpdate();
+        }
+    }
+}, 1000);
+
+// ==================== HTTP СЕРВЕР ====================
+
+const server = app.listen(PORT, () => {
+    console.log(`✅ Сервер запущен: http://localhost:${PORT}`);
+    console.log(`Админка: http://localhost:${PORT}/admin/admin.html`);
+    console.log(`Планшет врача: http://localhost:${PORT}/doctor/doctor.html`);
+});
+
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, ws => {
+        wss.emit('connection', ws, request);
+    });
+});

@@ -1,0 +1,965 @@
+/* ==================== ПЕРЕМЕННЫЕ И ТЕМЫ ==================== */
+:root {
+  /* Светлая тема (по умолчанию) */
+  --primary-color: #007bff;
+  --primary-dark: #0056b3;
+  --success-color: #28a745;
+  --success-dark: #218838;
+  --success-bg-light: #d4edda;
+  --success-text-dark: #155724;
+  
+  --warning-color: #ffc107;
+  --warning-dark: #e0a800;
+  --warning-bg-light: #fff3cd;
+  --warning-text-dark: #856404;
+  
+  --danger-color: #dc3545;
+  --danger-dark: #c82333;
+  --danger-bg-light: #f8d7da;
+  --danger-text-dark: #721c24;
+  
+  --info-color: #17a2b8;
+  
+  --bg-body: #f4f7f6;
+  --bg-card: #ffffff;
+  --bg-panel: #f8fafc;
+  --text-main: #333333;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --border-radius: 8px;
+  --transition: all 0.3s ease;
+  
+  --header-gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  --card-gradient-running: linear-gradient(135deg, #ffffff, #f0fff4);
+  --card-gradient-paused: linear-gradient(135deg, #ffffff, #fffbe6);
+  --card-gradient-completed: linear-gradient(135deg, #ffffff, #fff5f5);
+  
+  --proc-bg-default: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  --proc-bg-running: linear-gradient(135deg, #d4edda, #c3e6cb);
+  --proc-bg-paused: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  --proc-bg-completed: linear-gradient(135deg, #f8d7da, #f5c6cb);
+}
+
+[data-theme="dark"] {
+  /* Темная тема */
+  --primary-color: #3b82f6;
+  --primary-dark: #2563eb;
+  --success-color: #10b981;
+  --success-dark: #059669;
+  --success-bg-light: rgba(16, 185, 129, 0.15);
+  --success-text-dark: #6ee7b7;
+  
+  --warning-color: #f59e0b;
+  --warning-dark: #d97706;
+  --warning-bg-light: rgba(245, 158, 11, 0.15);
+  --warning-text-dark: #fcd34d;
+  
+  --danger-color: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-bg-light: rgba(239, 68, 68, 0.15);
+  --danger-text-dark: #fca5a5;
+  
+  --info-color: #06b6d4;
+  
+  --bg-body: #111827;
+  --bg-card: #1f2937;
+  --bg-panel: #1f2937;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --border-color: #374151;
+  
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+  
+  --header-gradient: linear-gradient(135deg, #1e40af, #312e81);
+  --card-gradient-running: linear-gradient(135deg, #1f2937, #064e3b);
+  --card-gradient-paused: linear-gradient(135deg, #1f2937, #451a03);
+  --card-gradient-completed: linear-gradient(135deg, #1f2937, #450a0a);
+  
+  --proc-bg-default: linear-gradient(135deg, #374151, #1f2937);
+  --proc-bg-running: linear-gradient(135deg, #064e3b, #065f46);
+  --proc-bg-paused: linear-gradient(135deg, #451a03, #78350f);
+  --proc-bg-completed: linear-gradient(135deg, #450a0a, #7f1d1d);
+}
+
+/* ==================== ПРОГРЕСС-БАР ==================== */
+.progress-container {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+.progress-bar.running {
+    background-color: var(--success-color);
+}
+
+.progress-bar.paused {
+    background-color: var(--warning-color);
+}
+
+.progress-bar.completed {
+    background-color: var(--danger-color);
+}
+
+.progress-bar.idle {
+    background-color: var(--text-muted);
+}
+
+/* ==================== БАЗОВЫЕ НАСТРОЙКИ ==================== */
+/* Процедурный селектор — согласуем с темой и перекроем inline */
+.procedure-selector {
+    padding: 15px !important;
+    background: var(--bg-panel) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+#global-procedure-select {
+    width: 300px !important;
+    padding: 10px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 4px !important;
+    background: var(--bg-input) !important;
+    color: var(--text-main) !important;
+    outline: none;
+    transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+#global-procedure-select:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ==================== HEADER ==================== */
+header {
+    background: var(--header-gradient);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background 0.3s ease;
+    /* Убираем относительное позиционирование, чтобы не ломать поток */
+    position: relative; 
+}
+
+header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 20px; /* Отступ до действий */
+    white-space: nowrap;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 1; /* Разрешаем сжиматься действиям, если места мало */
+}
+
+/* ========================================= */
+/* ГРУППА ПРАВЫХ КНОПОК (ЗВУК + ТЕМА)        */
+/* ========================================= */
+.header-controls-right {
+    display: flex;
+    gap: 12px; /* ФИКСИРОВАННЫЙ отступ между кнопками */
+    align-items: center;
+    flex-shrink: 0; /* ЗАПРЕТ СЖАТИЯ - кнопки всегда полного размера */
+    margin-left: auto; /* ПРИЖИМАЕТ группу в самый правый край */
+    z-index: 101;
+}
+
+/* Общий стиль для кнопок темы и звука */
+.btn-theme-toggle, 
+#sound-toggle-doctor {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    min-width: 44px; /* Минимальная ширина */
+    min-height: 44px; /* Минимальная высота */
+    flex-shrink: 0; /* Кнопка никогда не сожмется */
+}
+
+.btn-theme-toggle:hover, 
+#sound-toggle-doctor:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-theme-toggle:active, 
+#sound-toggle-doctor:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Специфично для кнопки звука */
+/*#sound-toggle-doctor {
+    /* Наследует все стили выше 
+}*/
+
+#connection-status {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+#connection-status:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ==================== MAIN CONTAINER ==================== */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 70px);
+}
+
+/* ==================== BEDS GRID ==================== */
+.beds-grid {
+    flex: 1;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+    overflow-y: auto;
+    background-color: var(--bg-body);
+    transition: background 0.3s ease;
+    /* Отступ справа для правой панели */
+    margin-right: 300px; 
+    padding-right: 16px;
+}
+
+/* ==================== BED CARD ==================== */
+.bed-card {
+    background: var(--bg-card);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 3px solid transparent;
+    position: relative;
+    min-height: 220px;
+    color: var(--text-main);
+}
+
+.bed-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.bed-card.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Статусы коек */
+.bed-card.idle {
+    border-color: var(--border-color);
+}
+
+.bed-card.running {
+    border-color: var(--success-color);
+    background: var(--card-gradient-running);
+}
+
+.bed-card.paused {
+    border-color: var(--warning-color);
+    background: var(--card-gradient-paused);
+}
+
+.bed-card.completed {
+    border-color: var(--danger-color);
+    background: var(--card-gradient-completed);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+.bed-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+}
+
+.bed-status {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bed-timer {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--text-main);
+    margin: 10px 0;
+    letter-spacing: 2px;
+}
+
+.bed-card.running .bed-timer { color: var(--success-color); }
+.bed-card.paused .bed-timer { color: var(--warning-color); }
+.bed-card.completed .bed-timer { color: var(--danger-color); }
+
+/* ==================== КНОПКИ УПРАВЛЕНИЯ ==================== */
+.bed-controls {
+    display: flex;
+    gap: 6px; /* Чуть уменьшили отступ */
+    width: 100%;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap; /* ✅ РАЗРЕШАЕМ ПЕРЕНОС кнопок на новую строку */
+    justify-content: center; /* Центрируем, если перенеслись */
+}
+
+/* Адаптив специально для книжной ориентации планшетов (высота > ширины) */
+@media (orientation: portrait) and (max-width: 992px) {
+    .bed-controls {
+        gap: 4px;
+    }
+    
+    .bed-controls button {
+        font-size: 0.7rem; /* Ещё меньше шрифт */
+        padding: 6px 4px;
+        min-height: 36px; /* Фиксируем высоту, чтобы не прыгали */
+    }
+    
+    /* Если кнопок две и они не влезают - разрешаем им быть друг под другом */
+    .bed-controls:has(button:nth-child(2)) {
+        /* Можно оставить flex-wrap, который уже включен выше */
+    }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+    .bed-controls {
+        flex-direction: column; /* ✅ На телефонах кнопки точно друг под другом */
+        gap: 6px;
+    }
+    
+    .bed-controls button {
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 10px;
+    }
+}
+
+.bed-controls button {
+    flex: 1 1 auto; /* ✅ Кнопки могут сжиматься и расти */
+    padding: 8px 6px; /* Уменьшили боковые отступы */
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem; /* ✅ Уменьшили шрифт для мобильных */
+    font-weight: 600;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0; /* ✅ Разрешаем сжатие меньше контента */
+    color: white;
+    white-space: nowrap; /* Текст не переносится внутри кнопки */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bed-controls button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+}
+
+.bed-controls button:active:not(:disabled) { transform: translateY(0); }
+.bed-controls button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-start { background-color: var(--success-color); }
+.btn-start:hover:not(:disabled) { background-color: var(--success-dark); }
+
+.btn-pause { background-color: var(--warning-color); color: #000; }
+.btn-pause:hover:not(:disabled) { background-color: var(--warning-dark); }
+
+.btn-reset { background-color: var(--danger-color); }
+.btn-reset:hover:not(:disabled) { background-color: var(--danger-dark); }
+
+.btn-next {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-right: 8px;
+}
+.btn-next:hover { background: #2563eb; }
+
+/* ==================== SIDEBAR (ЛЕВАЯ/ЦЕНТРАЛЬНАЯ) ==================== */
+#control-panel {
+    width: 320px;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+#selection-info {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    background-color: var(--bg-body);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+}
+
+#control-panel label {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+#procedure-select, #global-procedure-select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#procedure-select:hover:not(:disabled), #global-procedure-select:hover:not(:disabled) {
+    border-color: var(--primary-color);
+}
+
+#procedure-select:focus, #global-procedure-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+#procedure-select:disabled {
+    background-color: var(--bg-body);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.timer-display {
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: var(--border-radius);
+    letter-spacing: 3px;
+    border: 2px solid var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .timer-display {
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border-color: #4b5563;
+}
+
+.info-block {
+    background: var(--bg-body);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.info-block p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.info-block span {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* ==================== ПРАВАЯ ПАНЕЛЬ (ЖУРНАЛ СОБЫТИЙ) ==================== */
+.sidebar-right {
+    position: fixed;
+    right: 0;
+    top: 60px; 
+    width: 300px;
+    height: calc(100vh - 60px);
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+    z-index: 10;
+    padding: 15px;
+    box-sizing: border-box;
+    color: var(--text-main);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.sidebar-right h3 {
+    margin-top: 0;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-right .btn-clear {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sidebar-right .btn-clear:hover {
+    background: var(--bg-body);
+    color: var(--danger-color);
+}
+
+.events-list {
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.events-list .event-item {
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    border-left: 4px solid transparent;
+    animation: slideIn 0.3s ease;
+}
+
+.events-list .event-time {
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-right: 8px;
+}
+
+/* Типы событий */
+.event-info { background: rgba(23, 162, 184, 0.1); border-left-color: var(--info-color); }
+.event-info .event-text { color: var(--info-color); }
+
+.event-start, .event-resume { background: var(--success-bg-light); border-left-color: var(--success-color); }
+.event-start .event-text, .event-resume .event-text { color: var(--success-color); }
+
+.event-pause { background: var(--warning-bg-light); border-left-color: var(--warning-color); }
+.event-pause .event-text { color: var(--warning-color); }
+
+.event-completed { 
+    background: var(--danger-bg-light); 
+    border-left-color: var(--danger-color); 
+    animation: slideIn 0.3s ease, pulse 1s ease; 
+}
+.event-completed .event-text { color: var(--danger-color); font-weight: 600; }
+
+.event-reset { background: rgba(108, 117, 125, 0.1); border-left-color: var(--text-muted); }
+.event-reset .event-text { color: var(--text-muted); }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* ==================== ОТОБРАЖЕНИЕ ПРОЦЕДУРЫ ==================== */
+.bed-procedure {
+    background: var(--proc-bg-default);
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.bed-card.running .bed-procedure { background: var(--proc-bg-running); border-color: var(--success-color); }
+.bed-card.paused .bed-procedure { background: var(--proc-bg-paused); border-color: var(--warning-color); }
+.bed-card.completed .bed-procedure { background: var(--proc-bg-completed); border-color: var(--danger-color); }
+
+.procedure-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+.procedure-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: left;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bed-card.running .procedure-name { color: var(--success-dark); }
+.bed-card.paused .procedure-name { color: var(--warning-text-dark); }
+.bed-card.completed .procedure-name { color: var(--danger-text-dark); }
+
+/* ==================== УВЕДОМЛЕНИЕ О ЗАВЕРШЕНИИ ==================== */
+.completion-notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 16px rgba(220, 53, 69, 0.3);
+    z-index: 1000;
+    animation: slideInRight 0.3s ease;
+    max-width: 400px;
+    color: #721c24;
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.notification-content { display: flex; align-items: center; gap: 12px; }
+.notification-icon { font-size: 2rem; animation: bounce 1s infinite; }
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.notification-text { flex: 1; font-weight: 600; font-size: 0.95rem; line-height: 1.4; }
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #721c24;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.notification-close:hover { background: rgba(220, 53, 69, 0.2); }
+
+/* ==================== SCROLLBAR ==================== */
+.beds-grid::-webkit-scrollbar,
+.sidebar-right::-webkit-scrollbar,
+#control-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.beds-grid::-webkit-scrollbar-track,
+.sidebar-right::-webkit-scrollbar-track,
+#control-panel::-webkit-scrollbar-track {
+    background: var(--bg-body);
+}
+
+.beds-grid::-webkit-scrollbar-thumb,
+.sidebar-right::-webkit-scrollbar-thumb,
+#control-panel::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.beds-grid::-webkit-scrollbar-thumb:hover,
+.sidebar-right::-webkit-scrollbar-thumb:hover,
+#control-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* ==================== АДАПТИВНОСТЬ ==================== */
+
+/* Планшеты в альбомной ориентации (до 1024px) */
+@media (max-width: 1024px) {
+    header {
+        padding: 0.6rem 1rem;
+    }
+    
+    header h1 {
+        font-size: 1.4rem;
+        margin-right: 10px;
+    }
+
+    .header-controls-right {
+        gap: 8px;
+    }
+    
+    .btn-theme-toggle, 
+    #sound-toggle-doctor {
+        padding: 6px 10px;
+        font-size: 1.3rem;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    #control-panel { width: 280px; }
+    .beds-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+/* Мобильные устройства и планшеты в книжной ориентации (до 768px) */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: stretch; /* Растягиваем элементы по ширине */
+        gap: 12px;
+        padding: 15px;
+    }
+    
+    header h1 {
+        margin-right: 0;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .header-actions {
+        justify-content: center; /* Центрируем действия */
+        width: 100%;
+        order: 2;
+    }
+    
+    .header-controls-right {
+        width: 100%;
+        justify-content: center; /* Центрируем кнопки темы/звука */
+        margin-left: 0;
+        margin-top: 5px;
+        gap: 15px;
+        order: 3;
+    }
+    
+    .btn-theme-toggle, 
+    #sound-toggle-doctor {
+        padding: 10px 14px;
+        font-size: 1.5rem;
+        min-width: 50px;
+        min-height: 50px;
+    }
+
+    .main-container {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    #control-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        box-shadow: none;
+        order: 2;
+    }
+    
+    .beds-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        margin-right: 0;
+        padding-right: 10px;
+    }
+
+    .sidebar-right {
+        width: 250px;
+    }
+    
+    .beds-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .bed-card { padding: 15px; min-height: 200px; }
+    .bed-number { font-size: 1.4rem; }
+    .bed-timer { font-size: 2rem; }
+    .bed-controls button { padding: 8px 10px; font-size: 0.8rem; }
+    
+    #control-panel { padding: 15px; }
+    .timer-display { font-size: 2.5rem; padding: 15px; }
+    
+    .sidebar-right {
+        width: 100%;
+        height: 300px;
+        position: relative;
+        top: 0;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        order: 3;
+    }
+    
+    .completion-notification {
+        top: 70px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Очень маленькие экраны (до 480px) */
+@media (max-width: 480px) {
+    .header-controls-right {
+        gap: 10px;
+    }
+    
+    .btn-theme-toggle, 
+    #sound-toggle-doctor {
+        padding: 8px 10px;
+        font-size: 1.3rem;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .beds-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .bed-card { padding: 12px; min-height: 180px; }
+    .bed-number { font-size: 1.2rem; }
+    .bed-status { font-size: 0.85rem; }
+    .bed-timer { font-size: 1.8rem; }
+    .bed-controls { flex-direction: column; gap: 5px; }
+    .bed-controls button { width: 100%; }
+    .bed-procedure { padding: 8px 12px; }
+    .procedure-name { font-size: 0.85rem; }
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+    header, .sidebar-right, .bed-controls, #control-panel { display: none; }
+    .beds-grid { grid-template-columns: repeat(4, 1fr); margin-right: 0; }
+    .bed-card { break-inside: avoid; box-shadow: none; border: 1px solid #000; }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+.font-weight-bold { font-weight: 700; }
+.mt-2 { margin-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
+.hidden { display: none !important; }
+
+/* Стили для выпадающего списка процедур */
+.procedure-selector {
+    padding: 15px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.procedure-selector label {
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-right: 10px;
+}
+
+#global-procedure-select {
+    width: 300px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+#global-procedure-select:hover:not(:disabled) {
+    border-color: var(--primary-color);
+}
+
+#global-procedure-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+#global-procedure-select:disabled {
+    background-color: var(--bg-body);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Скрываем боковую панель управления */
+#control-panel {
+    display: none !important;
+}
+
+/* Растягиваем сетку коек на всю ширину */
+.beds-grid {
+    margin-right: 0 !important; /* Убираем отступ, который был зарезервирован под панель */
+    padding-right: 20px;
+}

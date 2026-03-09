@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🕗 Админка таймеров | Медкабинет</title>
+  <link rel="stylesheet" href="css/admin-design.css">
+</head>
+<body>
+  <header class="header">
+    <h1>🕗 Панель управления таймерами (14 коек)</h1>
+    <div class="header-actions">
+  <span id="connection-status">🟢 Подключено</span>
+  <a href="/timers_log.csv" class="btn btn-download">📥 Скачать журнал (CSV)</a>
+  <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
+  <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
+  <!-- Кнопка смены темы -->
+  <button id="theme-toggle-admin" class="btn-theme-toggle" title="Переключить тему">🌙</button>
+</div>
+  </header>
+
+  <main class="main">
+    <section class="beds-section">
+      <h2>Состояние коек</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Койка</th>
+            <th>Статус</th>
+            <th>Осталось</th>
+            <th>Процедура</th>
+            <th>Длительность (мин)</th>
+            <th>Управление</th>
+          </tr>
+        </thead>
+        <tbody id="beds-table-body">
+          <!-- Строки будут добавлены динамически через JS -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+<!-- Модальное окно справочника -->
+<div id="procedures-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📋 Справочник процедур</h2>
+            <button class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+            <button class="btn btn-add" onclick="openAddProcedureModal()">➕ Добавить</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Длительность</th>
+                        <th>Статус</th>
+                        <th>Дата</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="procedures-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =============== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ПРОЦЕДУРЫ =============== -->
+<div id="add-procedure-modal" class="modal" style="display:none;">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h2>➕ Добавить процедуру</h2>
+            <button class="modal-close" onclick="closeAddProcedureModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Название процедуры *</label>
+                <input type="text" id="add-procedure-name" placeholder="Например: Электрофорез" required>
+            </div>
+
+            <!-- ✅ УБРАН ЧЕКБОКС - ТЕПЕРЬ ВСЕГДА ЕСТЬ ЭТАПЫ -->
+            <div id="stages-container" style="margin-top: 15px; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; background: #f9fafb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong>Этапы:</strong>
+                    <button type="button" onclick="addStage()" style="background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">+ Добавить этап</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Общая длительность (минуты) *</label>
+                <!-- ✅ Добавлены step и min для поддержки дробных чисел -->
+                <input type="number" id="add-procedure-duration" step="0.1" min="0.1" placeholder="Сумма времени этапов" readonly>
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Длительность рассчитывается автоматически как сумма времени всех этапов.
+                </small>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-cancel" onclick="closeAddProcedureModal()">❌ Отмена</button>
+            <button class="btn btn-save" onclick="saveProcedure()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- =============== МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПРОЦЕДУРЫ =============== -->
+<div id="edit-procedure-modal" class="modal" style="display:none;">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h2>✏️ Редактировать процедуру</h2>
+            <button class="modal-close" onclick="closeEditProcedureModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-procedure-id">
+            <div class="form-group">
+                <label>Название процедуры</label>
+                <input type="text" id="edit-procedure-name" required>
+            </div>
+
+            <!-- ✅ УБРАН ЧЕКБОКС - КОНТЕЙНЕР ЭТАПОВ ВСЕГДА ВИДИМ -->
+            <div id="edit-stages-container" style="margin-top: 15px; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; background: #f9fafb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong>Этапы:</strong>
+                    <button type="button" onclick="addEditStage()" style="background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">+ Добавить этап</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Длительность (минуты)</label>
+                <!-- ✅ Добавлены step и min, поле только для чтения (расчитывается из этапов) -->
+                <input type="number" id="edit-procedure-duration" step="0.1" min="0.1" readonly>
+            </div>
+
+            <div class="form-group">
+                <label>Статус</label>
+                <select id="edit-procedure-active" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="true">✅ Активна</option>
+                    <option value="false">❌ Неактивна</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-cancel" onclick="closeEditProcedureModal()">❌ Отмена</button>
+            <button class="btn btn-save" onclick="updateProcedure()">💾 Сохранить изменения</button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ВЫБОРА ПРОЦЕДУРЫ -->
+<div id="select-procedure-modal" class="modal" style="display: none;">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h2>▶ Запуск процедуры на койке <span id="modal-bed-id">N</span></h2>
+            <button class="modal-close" onclick="closeSelectProcedureModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Выберите процедуру:</label>
+                <select id="modal-procedure-select" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="">-- Выберите процедуру --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Длительность (мин):</label>
+                <input type="number" id="modal-procedure-duration" min="1" readonly style="background: #f8f9fa;">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-cancel" onclick="closeSelectProcedureModal()">❌ Отмена</button>
+            <button class="btn btn-start" onclick="launchProcedureOnBed()">▶ Запустить</button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО QR-КОДОВ -->
+<div id="qr-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>🔗 Быстрый доступ</h2>
+      <button class="modal-close" onclick="document.getElementById('qr-modal').style.display='none'">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; margin-bottom: 12px;">
+        <button class="btn btn-download" id="qr-admin-btn">🛠 Панель администратора</button>
+        <button class="btn btn-download" id="qr-doctor-btn">💊 Планшет врача</button>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom:8px;">
+        Убедитесь, что адрес содержит IP компьютера в сети, а не «localhost».
+      </div>
+      <input id="qr-url-input" type="text" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);" readonly>
+      <div id="qr-container" style="margin-top:15px; display:flex; justify-content:center;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/admin-app.js"></script>
+<script type="module" src="js/admin-theme.js"></script>
+<script src="/shared/js/qrcode.min.js"></script>
+<script type="module" src="js/admin-qr.js"></script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+/* ==================== ПЕРЕМЕННЫЕ И ТЕМЫ ==================== */
+:root {
+  /* Светлая тема (по умолчанию) */
+  --bg-body: #f5f7fa;
+  --text-main: #1f2937;
+  --text-muted: #4b5563;
+  --bg-card: #ffffff;
+  --bg-header: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --text-header: #ffffff;
+  --border-color: #e5e7eb;
+  --bg-input: #ffffff;
+  --bg-table-head: #f9fafb;
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  
+  /* Цвета статусов */
+  --status-idle-bg: #e5e7eb;
+  --status-idle-text: #6b7280;
+  --status-running-bg: #d1fae5;
+  --status-running-text: #059669;
+  --status-completed-bg: #fee2e2;
+  --status-completed-text: #dc2626;
+  --status-waiting-bg: #fef3c7;
+  --status-waiting-text: #d97706;
+
+  /* Цвета кнопок (базовые) */
+  --btn-start-bg: #10b981;
+  --btn-stop-bg: #ef4444;
+  --btn-reset-bg: #6b7280;
+  --btn-edit-bg: #f59e0b;
+  --btn-delete-bg: #ef4444;
+  --btn-download-bg: #3b82f6;
+  --btn-procedures-bg: #8b5cf6;
+  --btn-add-bg: #10b981;
+  --btn-cancel-bg: #f8fafc;
+  --btn-cancel-text: #475569;
+  --btn-cancel-border: #cbd5e1;
+  --btn-save-bg: #10b981;
+}
+
+[data-theme="dark"] {
+  /* Темная тема */
+  --bg-body: #111827;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --bg-card: #1f2937;
+  /* Градиент для темной темы чуть темнее или можно оставить тот же, он хорошо смотрится */
+  --bg-header: linear-gradient(135deg, #4c1d95 0%, #312e81 100%); 
+  --text-header: #ffffff;
+  --border-color: #374151;
+  --bg-input: #374151;
+  --bg-table-head: #1f2937;
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Адаптация статусов для темного фона (чуть ярче или с прозрачностью) */
+  --status-idle-bg: #374151;
+  --status-idle-text: #d1d5db;
+  --status-running-bg: rgba(5, 150, 105, 0.2);
+  --status-running-text: #6ee7b7;
+  --status-completed-bg: rgba(220, 38, 38, 0.2);
+  --status-completed-text: #fca5a5;
+  --status-waiting-bg: rgba(217, 119, 6, 0.2);
+  --status-waiting-text: #fcd34d;
+
+  /* Кнопки в темной теме (можно сделать чуть менее яркими или оставить такими же для акцента) */
+  --btn-cancel-bg: #374151;
+  --btn-cancel-text: #e5e7eb;
+  --btn-cancel-border: #4b5563;
+}
+
+/* ==================== ПРОГРЕСС-БАР ==================== */
+.progress-container {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+.progress-bar.running {
+  background-color: #10b981; /* --btn-start-bg */
+}
+
+.progress-bar.paused {
+  background-color: #f59e0b; /* --btn-edit-bg */
+}
+
+.progress-bar.completed {
+  background-color: #ef4444; /* --btn-stop-bg */
+}
+
+.progress-bar.idle {
+  background-color: var(--text-muted);
+}
+
+/* ==================== БАЗОВЫЕ СТИЛИ ==================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.6;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ==================== HEADER ==================== */
+.header {
+  background: var(--bg-header);
+  color: var(--text-header);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  transition: background 0.3s ease;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Кнопка переключения темы */
+.btn-theme-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.btn-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#connection-status {
+  padding: 5px 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+/* ==================== MAIN CONTENT ==================== */
+.main {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.beds-section {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.beds-section h2 {
+  margin-bottom: 15px;
+  color: var(--text-muted);
+}
+
+/* ==================== TABLES ==================== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
+}
+
+th {
+  background: var(--bg-table-head);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* ==================== STATUS BADGES ==================== */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-idle { background: var(--status-idle-bg); color: var(--status-idle-text); }
+.status-running { background: var(--status-running-bg); color: var(--status-running-text); }
+.status-completed { background: var(--status-completed-bg); color: var(--status-completed-text); animation: pulse 1s infinite; }
+.status-waiting { background: var(--status-waiting-bg); color: var(--status-waiting-text); }
+
+.timer-cell {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.actions-cell {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* ==================== BUTTONS ==================== */
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 2px;
+  font-size: 0.85rem;
+  transition: opacity 0.2s, background 0.2s, color 0.2s;
+  text-decoration: none;
+  display: inline-block;
+  color: white; /* По умолчанию белый текст для цветных кнопок */
+}
+
+.btn:hover { opacity: 0.9; }
+
+.btn-start { background: var(--btn-start-bg); }
+.btn-stop { background: var(--btn-stop-bg); }
+.btn-reset { background: var(--btn-reset-bg); }
+.btn-edit { background: var(--btn-edit-bg); }
+.btn-delete { background: var(--btn-delete-bg); }
+.btn-download { background: var(--btn-download-bg); }
+.btn-procedures { background: var(--btn-procedures-bg); }
+.btn-add { background: var(--btn-add-bg); margin-bottom: 15px; }
+.btn-save { background: var(--btn-save-bg); }
+
+.btn-cancel { 
+  background: var(--btn-cancel-bg); 
+  color: var(--btn-cancel-text); 
+  border: 1px solid var(--btn-cancel-border);
+}
+
+/* ==================== MODALS ==================== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay-bg);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-modal);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.modal-small {
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
+}
+
+.modal-header h2 {
+  font-size: 1.3rem;
+  color: var(--text-main);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--text-main);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  background: var(--bg-input);
+  color: var(--text-main);
+  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.form-group .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
+}
+
+/* ==================== DARK THEME FIXES (MODALS) ==================== */
+/* Контейнеры этапов в модалках имеют инлайновые светлые стили — переопределяем */
+[data-theme="dark"] #stages-container,
+[data-theme="dark"] #edit-stages-container {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Readonly-инпуты в модалках: адаптация под темную тему, перекрываем inline */
+[data-theme="dark"] .modal input[readonly] {
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+}
+
+/* ==================== STAGES ==================== */
+.stage-item {
+  background: var(--bg-table-head); /* Используем фон заголовка таблицы для контраста */
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 10px;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.stage-item input[type="text"],
+.stage-item input[type="number"] {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #10b981; /* Цвет галочки */
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  .header { flex-direction: column; text-align: center; }
+  table { font-size: 0.85rem; }
+  th, td { padding: 8px; }
+  
+  .modal-content {
+    width: 95%;
+    max-width: none;
+  }
+}
+
+/* Специфика для таблицы внутри модального окна процедур */
+#procedures-modal table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+#procedures-modal th,
+#procedures-modal td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+#procedures-modal th {
+  background: var(--bg-table-head);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+#procedures-modal tr:last-child td {
+  border-bottom: none;
+}
