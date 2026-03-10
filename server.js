@@ -9,6 +9,26 @@ const app = express();
 const PORT = 3000;
 const MAX_BEDS = 14; // Настройка количества коек
 
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+const MED_TIMERS_BASE_DIR = process.env.MED_TIMERS_BASE_DIR ? path.resolve(process.env.MED_TIMERS_BASE_DIR) : null;
+const MED_TIMERS_REPO_DIR = process.env.MED_TIMERS_REPO_DIR
+    ? path.resolve(process.env.MED_TIMERS_REPO_DIR)
+    : (MED_TIMERS_BASE_DIR ? path.join(MED_TIMERS_BASE_DIR, 'repo') : __dirname);
+const MED_TIMERS_BRANCH = process.env.MED_TIMERS_BRANCH || 'main';
+
+function execAsync(command, options = {}) {
+    return new Promise((resolve, reject) => {
+        exec(command, options, (err, stdout, stderr) => {
+            if (err) return reject({ err, stdout, stderr });
+            resolve({ stdout, stderr });
+        });
+    });
+}
+
 // CORS для локального тестирования
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -25,6 +45,10 @@ app.use(express.json());
 
 // Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/healthz', (req, res) => {
+    res.status(200).send('ok');
+});
 
 app.get(['/doctor', '/tablet'], (req, res) => {
     res.redirect('/doctor/doctor.html');
@@ -61,7 +85,7 @@ app.get('/api/server-info', (req, res) => {
 
 // Версия сборки из git
 app.get('/api/version', (req, res) => {
-    exec('git rev-parse --short HEAD', (err, stdout) => {
+    exec(`git -C "${MED_TIMERS_REPO_DIR}" rev-parse --short HEAD`, (err, stdout) => {
         if (err) {
             return res.json({ version: null });
         }
@@ -73,27 +97,25 @@ app.get('/api/version', (req, res) => {
 
 // Проверка обновлений (fetch и статус)
 app.get('/api/updates/check', (req, res) => {
-    exec('git fetch', (err) => {
+    exec(`git -C "${MED_TIMERS_REPO_DIR}" fetch`, (err) => {
         if (err) {
             console.error('Git fetch error:', err);
             return res.json({ available: false, error: 'Git fetch failed' });
         }
-        
-        // Проверяем, сколько коммитов позади
-        exec('git rev-list HEAD...origin/main --count', (err, stdout) => {
-            if (err) {
-                // Если origin/main нет, пробуем origin/master
-                 exec('git rev-list HEAD...origin/master --count', (err2, stdout2) => {
-                     if (err2) {
-                         console.error('Git rev-list error:', err2);
-                         return res.json({ available: false, error: 'Git check failed' });
-                     }
-                     const count = parseInt(stdout2.trim());
-                     res.json({ available: count > 0, count });
-                 });
-                 return;
+
+        exec(`git -C "${MED_TIMERS_REPO_DIR}" rev-list HEAD...origin/${MED_TIMERS_BRANCH} --count`, (err2, stdout) => {
+            if (err2) {
+                exec(`git -C "${MED_TIMERS_REPO_DIR}" rev-list HEAD...origin/master --count`, (err3, stdout2) => {
+                    if (err3) {
+                        console.error('Git rev-list error:', err3);
+                        return res.json({ available: false, error: 'Git check failed' });
+                    }
+                    const count = parseInt(String(stdout2).trim(), 10) || 0;
+                    res.json({ available: count > 0, count });
+                });
+                return;
             }
-            const count = parseInt(stdout.trim());
+            const count = parseInt(String(stdout).trim(), 10) || 0;
             res.json({ available: count > 0, count });
         });
     });
@@ -101,28 +123,69 @@ app.get('/api/updates/check', (req, res) => {
 
 // Установка обновлений (pull)
 app.post('/api/updates/pull', (req, res) => {
-    exec('git pull', (err, stdout, stderr) => {
-        if (err) {
-            console.error('Git pull error:', err);
-            return res.status(500).json({ error: 'Update failed', details: stderr });
+    (async () => {
+        if (!MED_TIMERS_BASE_DIR) {
+            exec(`git -C "${MED_TIMERS_REPO_DIR}" pull`, (err, stdout, stderr) => {
+                if (err) {
+                    console.error('Git pull error:', err);
+                    return res.status(500).json({ error: 'Update failed', details: stderr });
+                }
+                res.json({ success: true, message: 'Updated successfully. Restarting server...' });
+                setTimeout(() => process.exit(1), 1000);
+            });
+            return;
         }
-        console.log('Update successful:', stdout);
-        
-        // Перезапуск сервера (для systemd: exit 1 вызовет рестарт, если Restart=on-failure)
-        // Но дадим клиенту ответ перед выходом
-        res.json({ success: true, message: 'Updated successfully. Restarting server...' });
-        
-        setTimeout(() => {
-            console.log('Restarting process...');
-            process.exit(1); 
-        }, 1000);
-    });
+
+        const baseDir = MED_TIMERS_BASE_DIR;
+        const repoDir = MED_TIMERS_REPO_DIR;
+        const branch = MED_TIMERS_BRANCH;
+
+        try {
+            await execAsync(`git -C "${repoDir}" fetch`);
+
+            const { stdout: currentStdout } = await execAsync(`git -C "${repoDir}" rev-parse HEAD`);
+            const { stdout: targetStdout } = await execAsync(`git -C "${repoDir}" rev-parse origin/${branch}`);
+            const currentHash = String(currentStdout).trim();
+            const targetHash = String(targetStdout).trim();
+
+            if (!targetHash || targetHash === currentHash) {
+                res.json({ success: true, message: 'No updates available.' });
+                return;
+            }
+
+            const releasesDir = path.join(baseDir, 'releases');
+            const releaseName = targetHash.slice(0, 12);
+            const releaseDir = path.join(releasesDir, releaseName);
+            fs.mkdirSync(releasesDir, { recursive: true });
+            fs.mkdirSync(releaseDir, { recursive: true });
+
+            await execAsync(`git -C "${repoDir}" archive --format=tar origin/${branch} | tar -x -C "${releaseDir}"`);
+
+            const pkgLockPath = path.join(releaseDir, 'package-lock.json');
+            if (fs.existsSync(pkgLockPath)) {
+                await execAsync(`cd "${releaseDir}" && npm ci --omit=dev`);
+            } else {
+                await execAsync(`cd "${releaseDir}" && npm install --omit=dev`);
+            }
+
+            const currentLink = path.join(baseDir, 'current');
+            await execAsync(`ln -sfn "${releaseDir}" "${currentLink}"`);
+
+            await execAsync(`git -C "${repoDir}" reset --hard origin/${branch}`);
+
+            res.json({ success: true, message: `Updated to ${releaseName}. Restarting server...` });
+            setTimeout(() => process.exit(1), 1200);
+        } catch (e) {
+            console.error('Safe update error:', e?.err || e);
+            res.status(500).json({ error: 'Update failed', details: e?.stderr || String(e?.err || e) });
+        }
+    })();
 });
 
 // ==================== ХРАНЕНИЕ ДАННЫХ ====================
 
 // Журнал таймеров
-const logFile = path.join(__dirname, 'timers_log.csv');
+const logFile = path.join(DATA_DIR, 'timers_log.csv');
 
 // Инициализация журнала
 if (!fs.existsSync(logFile)) {
@@ -137,7 +200,7 @@ function logEvent(bedId, event, duration, operator, procedureName) {
 }
 
 // Справочник процедур
-const proceduresFile = path.join(__dirname, 'procedures.json');
+const proceduresFile = path.join(DATA_DIR, 'procedures.json');
 let procedures = [
     { id: 1, name: 'Электрофорез', duration: 15, active: true },
     { id: 2, name: 'Магнитотерапия', duration: 20, active: true },

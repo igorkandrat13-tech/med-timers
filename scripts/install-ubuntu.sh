@@ -8,9 +8,10 @@ SERVICE_NAME="med-timers"
 USER_NAME="medtimers"
 ENABLE_HTTPS="no"
 GIT_REPO=""
+LAYOUT="legacy"
 
 usage() {
-  echo "Usage: sudo bash scripts/install-ubuntu.sh [--domain your-domain] [--email admin@example.com] [--user your-user] [--target-dir /path/to/app] [--enable-https yes|no] [--git-repo https://github.com/user/repo.git]"
+  echo "Usage: sudo bash scripts/install-ubuntu.sh [--domain your-domain] [--email admin@example.com] [--user your-user] [--target-dir /path/to/app] [--enable-https yes|no] [--git-repo https://github.com/user/repo.git] [--layout safe|legacy]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -21,6 +22,7 @@ while [[ $# -gt 0 ]]; do
     --target-dir) TARGET_DIR="$2"; shift 2 ;;
     --enable-https) ENABLE_HTTPS="$2"; shift 2 ;;
     --git-repo) GIT_REPO="$2"; shift 2 ;;
+    --layout) LAYOUT="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1"; usage; exit 1 ;;
   esac
@@ -33,19 +35,21 @@ fi
 
 # Устанавливаем TARGET_DIR по умолчанию в зависимости от пользователя
 if [[ -z "$TARGET_DIR" ]]; then
-  if [[ "$USER_NAME" == "root" ]]; then
-    TARGET_DIR="/opt/med-timers"
+  if [[ "$LAYOUT" == "safe" ]]; then
+    TARGET_DIR="/srv/med-timers"
   else
-    # Если пользователь существует, используем его домашнюю папку
-    if id "$USER_NAME" &>/dev/null; then
-      USER_HOME=$(eval echo "~$USER_NAME")
-      TARGET_DIR="$USER_HOME/med-timers"
+    if [[ "$USER_NAME" == "root" ]]; then
+      TARGET_DIR="/opt/med-timers"
     else
-      # Если пользователя нет, будем создавать в /opt (если это medtimers) или в home
-      if [[ "$USER_NAME" == "medtimers" ]]; then
-         TARGET_DIR="/opt/med-timers"
+      if id "$USER_NAME" &>/dev/null; then
+        USER_HOME=$(eval echo "~$USER_NAME")
+        TARGET_DIR="$USER_HOME/med-timers"
       else
-         TARGET_DIR="/home/$USER_NAME/med-timers"
+        if [[ "$USER_NAME" == "medtimers" ]]; then
+           TARGET_DIR="/opt/med-timers"
+        else
+           TARGET_DIR="/home/$USER_NAME/med-timers"
+        fi
       fi
     fi
   fi
@@ -54,7 +58,7 @@ fi
 echo "Deploying to: $TARGET_DIR"
 echo "Running as user: $USER_NAME"
 apt-get update -y
-apt-get install -y curl ca-certificates gnupg rsync nginx ufw git
+apt-get install -y curl ca-certificates gnupg rsync nginx ufw git tar
 
 echo "[2/8] Install Node.js LTS"
 curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
@@ -68,37 +72,70 @@ fi
 mkdir -p "$TARGET_DIR"
 
 echo "[4/8] Deploy project files"
-if [[ -n "$GIT_REPO" ]]; then
-  if [ -d "$TARGET_DIR/.git" ]; then
-    echo "Updating existing repo in $TARGET_DIR..."
-    cd "$TARGET_DIR"
-    git pull
-  elif [ -d "$TARGET_DIR" ]; then
-    echo "Directory $TARGET_DIR exists but is not a git repo. Backing up..."
-    BACKUP_DIR="${TARGET_DIR}_backup_$(date +%s)"
-    mv "$TARGET_DIR" "$BACKUP_DIR"
-    git clone "$GIT_REPO" "$TARGET_DIR"
-    
-    # Restore data files if they exist
-    echo "Restoring data files from backup..."
-    [ -f "$BACKUP_DIR/timers_log.csv" ] && cp "$BACKUP_DIR/timers_log.csv" "$TARGET_DIR/"
-    [ -f "$BACKUP_DIR/procedures.json" ] && cp "$BACKUP_DIR/procedures.json" "$TARGET_DIR/"
-  else
-    echo "Cloning $GIT_REPO into $TARGET_DIR..."
-    mkdir -p "$(dirname "$TARGET_DIR")"
-    git clone "$GIT_REPO" "$TARGET_DIR"
-  fi
-else
-  SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  rsync -a --delete --exclude "node_modules" --exclude ".git" "$SRC_DIR"/ "$TARGET_DIR"/
-fi
+if [[ "$LAYOUT" == "safe" ]]; then
+  BASE_DIR="$TARGET_DIR"
+  REPO_DIR="$BASE_DIR/repo"
+  RELEASES_DIR="$BASE_DIR/releases"
+  SHARED_DIR="$BASE_DIR/shared"
+  CURRENT_LINK="$BASE_DIR/current"
 
-# Исправление прав доступа (рекурсивно, включая .git)
-echo "Fixing permissions..."
-chown -R "$USER_NAME":"$USER_NAME" "$TARGET_DIR"
-# Отмечаем директорию как безопасную для git
-if command -v git &> /dev/null; then
-  sudo -u "$USER_NAME" git config --global --add safe.directory "$TARGET_DIR" || true
+  mkdir -p "$REPO_DIR" "$RELEASES_DIR" "$SHARED_DIR"
+
+  if [[ -n "$GIT_REPO" ]]; then
+    if [ -d "$REPO_DIR/.git" ]; then
+      cd "$REPO_DIR"
+      git pull
+    elif [ -d "$REPO_DIR" ]; then
+      rm -rf "$REPO_DIR"
+      git clone "$GIT_REPO" "$REPO_DIR"
+    else
+      git clone "$GIT_REPO" "$REPO_DIR"
+    fi
+  else
+    SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    rsync -a --delete --exclude "node_modules" --exclude ".git" "$SRC_DIR"/ "$REPO_DIR"/
+    cd "$REPO_DIR"
+    if [ ! -d ".git" ]; then
+      git init
+    fi
+  fi
+
+  chown -R "$USER_NAME":"$USER_NAME" "$BASE_DIR"
+  sudo -u "$USER_NAME" git -C "$REPO_DIR" config --global --add safe.directory "$REPO_DIR" || true
+
+  sudo -u "$USER_NAME" bash -lc "export MED_TIMERS_BASE_DIR='$BASE_DIR'; export MED_TIMERS_REPO_DIR='$REPO_DIR'; export MED_TIMERS_BRANCH='main'; export DATA_DIR='$SHARED_DIR'; bash '$REPO_DIR/scripts/safe-update.sh' apply >/dev/null"
+  RELEASE_PATH="$(readlink -f "$CURRENT_LINK")"
+  chown -R "$USER_NAME":"$USER_NAME" "$RELEASES_DIR" "$SHARED_DIR"
+else
+  if [[ -n "$GIT_REPO" ]]; then
+    if [ -d "$TARGET_DIR/.git" ]; then
+      echo "Updating existing repo in $TARGET_DIR..."
+      cd "$TARGET_DIR"
+      git pull
+    elif [ -d "$TARGET_DIR" ]; then
+      echo "Directory $TARGET_DIR exists but is not a git repo. Backing up..."
+      BACKUP_DIR="${TARGET_DIR}_backup_$(date +%s)"
+      mv "$TARGET_DIR" "$BACKUP_DIR"
+      git clone "$GIT_REPO" "$TARGET_DIR"
+      
+      echo "Restoring data files from backup..."
+      [ -f "$BACKUP_DIR/timers_log.csv" ] && cp "$BACKUP_DIR/timers_log.csv" "$TARGET_DIR/"
+      [ -f "$BACKUP_DIR/procedures.json" ] && cp "$BACKUP_DIR/procedures.json" "$TARGET_DIR/"
+    else
+      echo "Cloning $GIT_REPO into $TARGET_DIR..."
+      mkdir -p "$(dirname "$TARGET_DIR")"
+      git clone "$GIT_REPO" "$TARGET_DIR"
+    fi
+  else
+    SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    rsync -a --delete --exclude "node_modules" --exclude ".git" "$SRC_DIR"/ "$TARGET_DIR"/
+  fi
+
+  echo "Fixing permissions..."
+  chown -R "$USER_NAME":"$USER_NAME" "$TARGET_DIR"
+  if command -v git &> /dev/null; then
+    sudo -u "$USER_NAME" git config --global --add safe.directory "$TARGET_DIR" || true
+  fi
 fi
 
 echo "[5/8] Install Node dependencies"
@@ -108,8 +145,15 @@ if [[ ! -d "/home/$USER_NAME" ]]; then
   chown -R "$USER_NAME":"$USER_NAME" "/home/$USER_NAME"
 fi
 
-sudo -u "$USER_NAME" bash -lc "cd '$TARGET_DIR' && npm init -y >/dev/null 2>&1 || true"
-sudo -u "$USER_NAME" bash -lc "cd '$TARGET_DIR' && npm install express ws --omit=dev"
+if [[ "$LAYOUT" == "safe" ]]; then
+  BASE_DIR="$TARGET_DIR"
+  RELEASE_DIR="$(readlink -f "$BASE_DIR/current")"
+  sudo -u "$USER_NAME" bash -lc "cd '$RELEASE_DIR' && npm init -y >/dev/null 2>&1 || true"
+  sudo -u "$USER_NAME" bash -lc "cd '$RELEASE_DIR' && npm install --omit=dev"
+else
+  sudo -u "$USER_NAME" bash -lc "cd '$TARGET_DIR' && npm init -y >/dev/null 2>&1 || true"
+  sudo -u "$USER_NAME" bash -lc "cd '$TARGET_DIR' && npm install express ws --omit=dev"
+fi
 
 echo "[6/8] Create systemd service"
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
@@ -121,9 +165,13 @@ After=network.target
 Type=simple
 User=${USER_NAME}
 Group=${USER_NAME}
-WorkingDirectory=${TARGET_DIR}
+WorkingDirectory=$( [[ "$LAYOUT" == "safe" ]] && echo "${TARGET_DIR}/current" || echo "${TARGET_DIR}" )
 ExecStart=/usr/bin/node server.js
 Environment=NODE_ENV=production
+Environment=DATA_DIR=$( [[ "$LAYOUT" == "safe" ]] && echo "${TARGET_DIR}/shared" || echo "${TARGET_DIR}" )
+Environment=MED_TIMERS_BASE_DIR=$( [[ "$LAYOUT" == "safe" ]] && echo "${TARGET_DIR}" || echo "" )
+Environment=MED_TIMERS_REPO_DIR=$( [[ "$LAYOUT" == "safe" ]] && echo "${TARGET_DIR}/repo" || echo "${TARGET_DIR}" )
+Environment=MED_TIMERS_BRANCH=main
 Restart=on-failure
 
 [Install]
