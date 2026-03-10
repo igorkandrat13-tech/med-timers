@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = 3000;
@@ -25,6 +26,94 @@ app.use(express.json());
 
 // Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
+
+const AUTH_SECRET = process.env.AUTH_SECRET || 'change-this-secret';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const DOCTOR_USER = process.env.DOCTOR_USER || 'doctor';
+const DOCTOR_PASSWORD = process.env.DOCTOR_PASSWORD || 'doctor123';
+
+function base64url(input) {
+    return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function signToken(payload) {
+    const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const body = base64url(JSON.stringify(payload));
+    const hmac = crypto.createHmac('sha256', AUTH_SECRET).update(`${header}.${body}`).digest('base64')
+        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    return `${header}.${body}.${hmac}`;
+}
+
+function verifyToken(token) {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [header, body, sig] = parts;
+    const expected = crypto.createHmac('sha256', AUTH_SECRET).update(`${header}.${body}`).digest('base64')
+        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    if (sig !== expected) return null;
+    try {
+        const payload = JSON.parse(Buffer.from(body.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+        if (payload.exp && Date.now() > payload.exp) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+function parseCookies(req) {
+    const header = req.headers.cookie || '';
+    const out = {};
+    header.split(';').forEach(p => {
+        const idx = p.indexOf('=');
+        if (idx > -1) {
+            const k = p.slice(0, idx).trim();
+            const v = p.slice(idx + 1).trim();
+            out[k] = decodeURIComponent(v);
+        }
+    });
+    return out;
+}
+
+app.post('/api/auth/login', (req, res) => {
+    const { username, password, role } = req.body || {};
+    let ok = false;
+    if (role === 'admin' && username === ADMIN_USER && password === ADMIN_PASSWORD) ok = true;
+    if (role === 'doctor' && username === DOCTOR_USER && password === DOCTOR_PASSWORD) ok = true;
+    if (!ok) return res.status(401).json({ error: 'Неверные учетные данные' });
+    const exp = Date.now() + 1000 * 60 * 60 * 12;
+    const token = signToken({ role, sub: username, exp });
+    res.setHeader('Set-Cookie', `mtoken=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax`);
+    res.json({ success: true, role });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+    res.setHeader('Set-Cookie', 'mtoken=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+    res.json({ success: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+    const cookies = parseCookies(req);
+    const payload = verifyToken(cookies.mtoken);
+    if (!payload) return res.json({ role: null });
+    res.json({ role: payload.role });
+});
+
+function ensureRole(role) {
+    return (req, res, next) => {
+        const cookies = parseCookies(req);
+        const payload = verifyToken(cookies.mtoken);
+        if (!payload || payload.role !== role) {
+            const target = role === 'admin' ? '/auth/login.html?role=admin' : '/auth/login.html?role=doctor';
+            return res.redirect(target);
+        }
+        next();
+    };
+}
+
+app.get('/admin/admin.html', ensureRole('admin'), (req, res, next) => next());
+app.get('/doctor/doctor.html', ensureRole('doctor'), (req, res, next) => next());
 
 app.get(['/doctor', '/tablet'], (req, res) => {
     res.redirect('/doctor/doctor.html');
@@ -482,6 +571,12 @@ wss.on('connection', (ws, req) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const bedId = parseInt(url.searchParams.get('bed'));
     const role = url.searchParams.get('role');
+    const cookies = parseCookies(req);
+    const payload = verifyToken(cookies.mtoken);
+    if (!payload || (role && payload.role !== role)) {
+        ws.close(4001, 'unauthorized');
+        return;
+    }
 
     clients.set(ws, { bedId, role });
 

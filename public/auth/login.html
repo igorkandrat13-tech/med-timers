@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход</title>
+  <link rel="stylesheet" href="/admin/css/admin-design.css">
+</head>
+<body>
+  <div class="modal" style="display:flex;">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h2 id="login-title">Вход</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Имя пользователя</label>
+          <input type="text" id="username" placeholder="Логин">
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="password" placeholder="Пароль">
+        </div>
+        <div id="error" style="color: var(--danger-color); min-height: 22px;"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-save" id="login-btn">Войти</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const role = params.get('role') || 'admin';
+    document.getElementById('login-title').textContent = role === 'doctor' ? 'Вход (врач)' : 'Вход (админ)';
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role })
+        });
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {}
+        if (!res.ok || !data || !data.success) {
+          const msg = (data && data.error) ? data.error : (text || 'Ошибка входа');
+          errEl.textContent = msg;
+          return;
+        }
+        if (role === 'doctor') location.href = '/doctor/doctor.html';
+        else location.href = '/admin/admin.html';
+      } catch (e) {
+        errEl.textContent = e.message || 'Ошибка сети';
+      }
+    });
+  </script>
+</body>
+</html>
+
