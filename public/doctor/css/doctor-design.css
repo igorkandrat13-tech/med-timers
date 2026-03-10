@@ -141,6 +141,30 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+/* ==================== DARK THEME FORM CONTROLS ==================== */
+/* Подсказываем браузеру рисовать нативные контролы в тёмной палитре */
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* Общие стили для select в тёмной теме */
+[data-theme="dark"] select {
+    background: var(--bg-input) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Стили выпадающего списка опций (поддерживается в современных браузерах) */
+[data-theme="dark"] select option,
+[data-theme="dark"] select optgroup {
+    background: var(--bg-panel) !important;
+    color: var(--text-main) !important;
+}
+
+/* Android/Chromium: убираем белую стрелку/фон у нативной стрелки где возможно */
+[data-theme="dark"] select::-ms-expand { display: none; }
+[data-theme="dark"] select::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.7; }
+
 * {
     margin: 0;
     padding: 0;

@@ -75,7 +75,7 @@ window.saveProcedure = async () => {
     
     stageItems.forEach((item, index) => {
         const stageName = item.querySelector('.stage-name').value.trim() || `Этап ${index + 1}`;
-        // ✅ ИСПРАВЛЕНО: используем parseFloat для дробных чисел
+        // Используем parseFloat для дробных чисел
         const stageDurationVal = parseFloat(item.querySelector('.stage-duration').value);
         
         if (isNaN(stageDurationVal) || stageDurationVal <= 0) {
