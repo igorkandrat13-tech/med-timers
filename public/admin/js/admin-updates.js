@@ -73,6 +73,13 @@ export function initUpdates() {
     async function checkUpdates() {
         try {
             const res = await fetch('/api/updates/check');
+            
+            // Если сервер вернул не JSON (например, HTML с ошибкой Nginx 404/502), обрабатываем это
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Сервер вернул некорректный ответ: ${res.status} ${res.statusText}`);
+            }
+
             const data = await res.json();
             
             if (data.available) {

@@ -3,14 +3,14 @@ set -euo pipefail
 
 DOMAIN=""
 EMAIL=""
-TARGET_DIR="/opt/med-timers"
+TARGET_DIR=""
 SERVICE_NAME="med-timers"
 USER_NAME="medtimers"
 ENABLE_HTTPS="no"
 GIT_REPO=""
 
 usage() {
-  echo "Usage: sudo bash scripts/install-ubuntu.sh [--domain your-domain] [--email admin@example.com] [--user your-user] [--target-dir /opt/med-timers] [--enable-https yes|no] [--git-repo https://github.com/user/repo.git]"
+  echo "Usage: sudo bash scripts/install-ubuntu.sh [--domain your-domain] [--email admin@example.com] [--user your-user] [--target-dir /path/to/app] [--enable-https yes|no] [--git-repo https://github.com/user/repo.git]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -31,7 +31,28 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-echo "[1/8] Install base packages"
+# Устанавливаем TARGET_DIR по умолчанию в зависимости от пользователя
+if [[ -z "$TARGET_DIR" ]]; then
+  if [[ "$USER_NAME" == "root" ]]; then
+    TARGET_DIR="/opt/med-timers"
+  else
+    # Если пользователь существует, используем его домашнюю папку
+    if id "$USER_NAME" &>/dev/null; then
+      USER_HOME=$(eval echo "~$USER_NAME")
+      TARGET_DIR="$USER_HOME/med-timers"
+    else
+      # Если пользователя нет, будем создавать в /opt (если это medtimers) или в home
+      if [[ "$USER_NAME" == "medtimers" ]]; then
+         TARGET_DIR="/opt/med-timers"
+      else
+         TARGET_DIR="/home/$USER_NAME/med-timers"
+      fi
+    fi
+  fi
+fi
+
+echo "Deploying to: $TARGET_DIR"
+echo "Running as user: $USER_NAME"
 apt-get update -y
 apt-get install -y curl ca-certificates gnupg rsync nginx ufw git
 
@@ -71,7 +92,14 @@ else
   SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   rsync -a --delete --exclude "node_modules" --exclude ".git" "$SRC_DIR"/ "$TARGET_DIR"/
 fi
+
+# Исправление прав доступа (рекурсивно, включая .git)
+echo "Fixing permissions..."
 chown -R "$USER_NAME":"$USER_NAME" "$TARGET_DIR"
+# Отмечаем директорию как безопасную для git
+if command -v git &> /dev/null; then
+  sudo -u "$USER_NAME" git config --global --add safe.directory "$TARGET_DIR" || true
+fi
 
 echo "[5/8] Install Node dependencies"
 # Убеждаемся, что домашняя папка существует и принадлежит пользователю
@@ -156,3 +184,14 @@ echo "Done."
 echo "Admin:  http://${DOMAIN:-<server-ip>}/admin"
 echo "Doctor: http://${DOMAIN:-<server-ip>}/doctor"
 echo "Service: systemctl status ${SERVICE_NAME}"
+  echo "Fix command (if fails): sudo bash scripts/install-ubuntu.sh --fix-perms --user $USER_NAME --target-dir $TARGET_DIR"
+fi
+
+if [[ "$1" == "--fix-perms" ]]; then
+  echo "Fixing permissions only..."
+  chown -R "$USER_NAME":"$USER_NAME" "$TARGET_DIR"
+  sudo -u "$USER_NAME" git config --global --add safe.directory "$TARGET_DIR" || true
+  systemctl restart "$SERVICE_NAME"
+  echo "Done."
+  exit 0
+fi
