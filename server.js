@@ -24,7 +24,26 @@ app.use((req, res, next) => {
 // Парсинг JSON
 app.use(express.json());
 
-// Статические файлы
+// Проверка доступа к HTML страницам админа и врача
+app.use((req, res, next) => {
+    if (req.method === 'GET' && typeof req.path === 'string' && req.path.endsWith('.html')) {
+        if (req.path.startsWith('/admin')) {
+            const cookies = parseCookies(req);
+            const payload = verifyToken(cookies.mtoken);
+            if (!payload || payload.role !== 'admin') {
+                return res.redirect('/auth/login.html?role=admin');
+            }
+        } else if (req.path.startsWith('/doctor')) {
+            const cookies = parseCookies(req);
+            const payload = verifyToken(cookies.mtoken);
+            if (!payload || payload.role !== 'doctor') {
+                return res.redirect('/auth/login.html?role=doctor');
+            }
+        }
+    }
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const AUTH_SECRET = process.env.AUTH_SECRET || 'change-this-secret';
