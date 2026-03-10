@@ -50,13 +50,16 @@ export function initUpdates() {
             
             try {
                 const res = await fetch('/api/updates/pull', { method: 'POST' });
-                const data = await res.json();
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (_) {}
                 
-                if (data.success || res.ok) {
+                if (res.ok && (data?.success || res.status === 200)) {
                     statusDiv.innerHTML = `
                         <div style="color: var(--success-color); text-align: center;">
                             <h3>✅ Готово!</h3>
-                            <p>${data.message || 'Обновлено успешно'}</p>
+                            <p>${(data && data.message) ? data.message : 'Обновлено успешно'}</p>
                             <p>Сервер перезагружается...</p>
                         </div>
                     `;
@@ -65,14 +68,15 @@ export function initUpdates() {
                         window.location.reload();
                     }, 5000);
                 } else {
-                    throw new Error(data.error || 'Unknown error');
+                    const errText = (data && (data.error || data.details)) ? `${data.error || 'Ошибка'}${data.details ? ' — ' + data.details : ''}` : `HTTP ${res.status}`;
+                    throw new Error(errText);
                 }
             } catch (err) {
                 console.error(err);
                 statusDiv.innerHTML = `
                     <div style="color: var(--danger-color); text-align: center;">
                         <h3>❌ Ошибка</h3>
-                        <p>${err.message}</p>
+                        <p>${err.message || 'Update failed'}</p>
                     </div>
                 `;
                 confirmBtn.disabled = false;
