@@ -59,6 +59,16 @@ app.get('/api/server-info', (req, res) => {
     });
 });
 
+// Версия сборки из git
+app.get('/api/version', (req, res) => {
+    exec('git rev-parse --short HEAD', (err, stdout) => {
+        if (err) {
+            return res.json({ version: null });
+        }
+        res.json({ version: stdout.trim() });
+    });
+});
+
 // ==================== GIT ОБНОВЛЕНИЯ ====================
 
 // Проверка обновлений (fetch и статус)

@@ -7,8 +7,19 @@ export function initUpdates() {
     const closeX = document.querySelector('.close-updates');
     const confirmBtn = document.getElementById('update-confirm-btn');
     const statusDiv = document.getElementById('updates-status');
+    const versionEl = document.getElementById('build-version');
 
     if (!checkBtn || !modal) return;
+
+    // Отобразить текущую версию сборки
+    if (versionEl) {
+        fetch('/api/version')
+          .then(r => r.json())
+          .then(d => {
+            if (d && d.version) versionEl.textContent = `v ${d.version}`;
+          })
+          .catch(() => {});
+    }
 
     // Открытие модалки и проверка
     checkBtn.addEventListener('click', () => {
