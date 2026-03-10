@@ -50,10 +50,14 @@ export function initUpdates() {
             
             try {
                 const res = await fetch('/api/updates/pull', { method: 'POST' });
+                const contentType = res.headers.get('content-type') || '';
+                const rawText = await res.text();
                 let data = null;
-                try {
-                    data = await res.json();
-                } catch (_) {}
+                if (contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(rawText);
+                    } catch (_) {}
+                }
                 
                 if (res.ok && (data?.success || res.status === 200)) {
                     statusDiv.innerHTML = `
@@ -68,7 +72,12 @@ export function initUpdates() {
                         window.location.reload();
                     }, 5000);
                 } else {
-                    const errText = (data && (data.error || data.details)) ? `${data.error || 'Ошибка'}${data.details ? ' — ' + data.details : ''}` : `HTTP ${res.status}`;
+                    const serverDetails = (data && (data.error || data.details))
+                        ? `${data.error || 'Ошибка'}${data.details ? ' — ' + data.details : ''}`
+                        : rawText;
+                    const trimmed = String(serverDetails || '').trim();
+                    const clipped = trimmed.length > 500 ? trimmed.slice(0, 500) + '…' : trimmed;
+                    const errText = clipped ? `${clipped}` : `HTTP ${res.status}`;
                     throw new Error(errText);
                 }
             } catch (err) {
