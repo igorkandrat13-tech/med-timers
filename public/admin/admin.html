@@ -13,6 +13,7 @@
   <span id="connection-status">🟢 Подключено</span>
   <a href="/timers_log.csv" class="btn btn-download">📥 Скачать журнал (CSV)</a>
   <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
+  <button class="btn btn-procedures" onclick="openUsersModal()">👤 Пользователи</button>
   <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
   <!-- Кнопка смены темы -->
   <button class="btn btn-download" id="check-updates-btn" title="Проверить и установить обновления">🔁 Проверить обновления</button>
@@ -66,6 +67,43 @@
             </table>
         </div>
     </div>
+</div>
+
+<!-- Модальное окно пользователей -->
+<div id="users-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>👤 Пользователи</h2>
+      <button class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom: 12px;">
+        <div class="form-group" style="margin:0; min-width: 240px;">
+          <label>ФИО *</label>
+          <input type="text" id="add-user-fio" placeholder="Иванов Иван Иванович">
+        </div>
+        <div class="form-group" style="margin:0; width: 180px;">
+          <label>ПИН-код *</label>
+          <input type="password" id="add-user-pin" placeholder="4-10 цифр" inputmode="numeric">
+        </div>
+        <button class="btn btn-add" id="add-user-btn">➕ Добавить</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>ФИО</th>
+            <th>Статус</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="users-table-body"></tbody>
+      </table>
+      <div style="margin-top: 10px; color: var(--text-muted); font-size: 0.9rem;">
+        ПИН хранится на сервере в виде хеша. Чтобы изменить ПИН, используйте «✏️».
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- =============== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ПРОЦЕДУРЫ =============== -->

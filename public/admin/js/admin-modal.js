@@ -32,4 +32,11 @@ export function initModalHandlers() {
       module.loadProcedures();
     });
   };
+
+  window.openUsersModal = () => {
+    document.getElementById('users-modal').style.display = 'flex';
+    import('./admin-users.js').then(module => {
+      module.loadUsers();
+    });
+  };
 }

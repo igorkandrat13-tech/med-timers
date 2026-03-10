@@ -5,43 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Вход</title>
   <link rel="stylesheet" href="/admin/css/admin-design.css">
+  <link rel="stylesheet" href="/auth/auth.css">
 </head>
 <body>
-  <div class="modal" style="display:flex;">
-    <div class="modal-content modal-small">
-      <div class="modal-header">
-        <h2 id="login-title">Вход</h2>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Имя пользователя</label>
-          <input type="text" id="username" placeholder="Логин">
+  <main class="auth-shell">
+    <section class="auth-card" aria-label="Авторизация">
+      <div class="auth-header">
+        <div class="auth-title-row">
+          <div class="auth-logo" aria-hidden="true">🕗</div>
+          <div>
+            <div class="auth-title" id="login-title">Вход</div>
+            <div class="auth-subtitle">Med Timers</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Пароль</label>
-          <input type="password" id="password" placeholder="Пароль">
+        <div class="auth-badge" id="role-badge"></div>
+      </div>
+
+      <div class="auth-body">
+        <div class="auth-field">
+          <label class="auth-label" id="login-label" for="username">Логин</label>
+          <input class="auth-input" type="text" id="username" placeholder="Введите логин" autocomplete="username">
+          <select class="auth-input" id="user-select" style="display:none;">
+            <option value="">Выберите пользователя</option>
+          </select>
         </div>
-        <div id="error" style="color: var(--danger-color); min-height: 22px;"></div>
+
+        <div class="auth-field">
+          <label class="auth-label" id="password-label" for="password">Пароль</label>
+          <div class="auth-password">
+            <input class="auth-input" type="password" id="password" placeholder="Введите пароль" autocomplete="current-password">
+            <button class="auth-eye" id="toggle-password" type="button" aria-label="Показать пароль">👁️</button>
+          </div>
+        </div>
+
+        <div class="auth-error" id="error" role="alert" aria-live="polite"></div>
       </div>
-      <div class="form-actions">
-        <button class="btn btn-save" id="login-btn">Войти</button>
+
+      <div class="auth-actions">
+        <button class="btn btn-save auth-submit" id="login-btn">Войти</button>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
   <script>
     const params = new URLSearchParams(location.search);
     const role = params.get('role') || 'admin';
-    document.getElementById('login-title').textContent = role === 'doctor' ? 'Вход (врач)' : 'Вход (админ)';
-    document.getElementById('login-btn').addEventListener('click', async () => {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const errEl = document.getElementById('error');
-      errEl.textContent = '';
+    const titleEl = document.getElementById('login-title');
+    const badgeEl = document.getElementById('role-badge');
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('error');
+    const userEl = document.getElementById('username');
+    const userSelectEl = document.getElementById('user-select');
+    const loginLabelEl = document.getElementById('login-label');
+    const passEl = document.getElementById('password');
+    const passwordLabelEl = document.getElementById('password-label');
+    const toggleEl = document.getElementById('toggle-password');
+
+    titleEl.textContent = 'Вход';
+    badgeEl.textContent = role === 'doctor' ? 'Врач' : 'Администратор';
+
+    async function loadDoctorUsers() {
       try {
+        const res = await fetch('/api/users/public');
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {}
+        const list = data && data.users ? data.users : [];
+        userSelectEl.innerHTML = '<option value="">Выберите пользователя</option>';
+        list.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = String(u.id);
+          opt.textContent = u.fio;
+          userSelectEl.appendChild(opt);
+        });
+        if (!list.length) {
+          errEl.textContent = 'Нет пользователей. Добавьте их в админке.';
+        }
+      } catch (e) {
+        errEl.textContent = e.message || 'Не удалось загрузить пользователей';
+      }
+    }
+
+    if (role === 'doctor') {
+      loginLabelEl.textContent = 'Пользователь';
+      userEl.style.display = 'none';
+      userSelectEl.style.display = 'block';
+      passwordLabelEl.textContent = 'ПИН-код';
+      passEl.placeholder = 'Введите ПИН-код';
+      passEl.autocomplete = 'one-time-code';
+      passEl.inputMode = 'numeric';
+      passEl.pattern = '\\\\d*';
+      loadDoctorUsers();
+    }
+
+    toggleEl.addEventListener('click', () => {
+      const isPwd = passEl.type === 'password';
+      passEl.type = isPwd ? 'text' : 'password';
+      toggleEl.textContent = isPwd ? '🙈' : '👁️';
+      toggleEl.setAttribute('aria-label', isPwd ? 'Скрыть пароль' : 'Показать пароль');
+      passEl.focus();
+    });
+
+    async function doLogin() {
+      const username = userEl.value.trim();
+      const password = passEl.value;
+      errEl.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Входим...';
+      try {
+        if (role === 'doctor' && !userSelectEl.value) {
+          errEl.textContent = 'Выберите пользователя';
+          return;
+        }
+        const payload = role === 'doctor'
+          ? { role: 'doctor', userId: userSelectEl.value, pin: password }
+          : { role: 'admin', username, password };
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, role })
+          body: JSON.stringify(payload)
         });
         const text = await res.text();
         let data = null;
@@ -55,9 +136,16 @@
         else location.href = '/admin/admin.html';
       } catch (e) {
         errEl.textContent = e.message || 'Ошибка сети';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Войти';
       }
-    });
+    }
+
+    btn.addEventListener('click', doLogin);
+    userEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+    passEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+    (role === 'doctor' ? userSelectEl : userEl).focus();
   </script>
 </body>
 </html>
-

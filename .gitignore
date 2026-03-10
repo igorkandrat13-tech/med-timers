@@ -8,6 +8,7 @@ yarn-error.log*
 # User data
 timers_log.csv
 procedures.json
+users.json
 
 # IDEs
 .idea/

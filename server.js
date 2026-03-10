@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 const crypto = require('crypto');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = 3000;
@@ -49,8 +50,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 const AUTH_SECRET = process.env.AUTH_SECRET || 'change-this-secret';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const DOCTOR_USER = process.env.DOCTOR_USER || 'doctor';
-const DOCTOR_PASSWORD = process.env.DOCTOR_PASSWORD || 'doctor123';
+
+function hashPin(pin) {
+    return crypto.createHmac('sha256', AUTH_SECRET).update(`pin:${String(pin)}`).digest('hex');
+}
+
+const usersFile = path.join(__dirname, 'users.json');
+let users = [];
+if (fs.existsSync(usersFile)) {
+    try {
+        users = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+        if (!Array.isArray(users)) users = [];
+    } catch {
+        users = [];
+    }
+} else {
+    users = [
+        { id: 1, fio: 'Врач', pinHash: hashPin('0000'), active: true, createdAt: new Date().toISOString() }
+    ];
+    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+}
+
+function saveUsers() {
+    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+}
 
 function base64url(input) {
     return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -96,19 +119,42 @@ function parseCookies(req) {
 }
 
 app.post('/api/auth/login', (req, res) => {
-    const { username, password, role } = req.body || {};
-    let ok = false;
-    if (role === 'admin' && username === ADMIN_USER && password === ADMIN_PASSWORD) ok = true;
-    if (role === 'doctor' && username === DOCTOR_USER && password === DOCTOR_PASSWORD) ok = true;
-    if (!ok) return res.status(401).json({ error: 'Неверные учетные данные' });
-    const exp = Date.now() + 1000 * 60 * 60 * 12;
-    const token = signToken({ role, sub: username, exp });
-    res.setHeader('Set-Cookie', `mtoken=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax`);
-    res.json({ success: true, role });
+    const { role } = req.body || {};
+
+    if (role === 'admin') {
+        const { username, password } = req.body || {};
+        if (username !== ADMIN_USER || password !== ADMIN_PASSWORD) {
+            return res.status(401).json({ error: 'Неверные учетные данные' });
+        }
+        const exp = Date.now() + 1000 * 60 * 60 * 12;
+        const token = signToken({ role: 'admin', sub: username, exp });
+        const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+        const secure = isHttps ? '; Secure' : '';
+        res.setHeader('Set-Cookie', `mtoken=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax${secure}`);
+        return res.json({ success: true, role: 'admin' });
+    }
+
+    if (role === 'doctor') {
+        const { userId, pin } = req.body || {};
+        const id = parseInt(userId, 10);
+        const user = users.find(u => u.id === id && u.active);
+        if (!user) return res.status(401).json({ error: 'Пользователь не найден' });
+        if (user.pinHash !== hashPin(pin)) return res.status(401).json({ error: 'Неверный ПИН-код' });
+        const exp = Date.now() + 1000 * 60 * 60 * 12;
+        const token = signToken({ role: 'doctor', sub: String(id), userId: id, fio: user.fio, exp });
+        const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+        const secure = isHttps ? '; Secure' : '';
+        res.setHeader('Set-Cookie', `mtoken=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax${secure}`);
+        return res.json({ success: true, role: 'doctor', fio: user.fio });
+    }
+
+    return res.status(400).json({ error: 'Неверная роль' });
 });
 
 app.post('/api/auth/logout', (req, res) => {
-    res.setHeader('Set-Cookie', 'mtoken=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    const secure = isHttps ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `mtoken=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`);
     res.json({ success: true });
 });
 
@@ -116,7 +162,48 @@ app.get('/api/auth/me', (req, res) => {
     const cookies = parseCookies(req);
     const payload = verifyToken(cookies.mtoken);
     if (!payload) return res.json({ role: null });
-    res.json({ role: payload.role });
+    res.json({ role: payload.role, userId: payload.userId || null, fio: payload.fio || null });
+});
+
+app.get('/api/users/public', (req, res) => {
+    res.json({ users: users.filter(u => u.active).map(u => ({ id: u.id, fio: u.fio })) });
+});
+
+app.get('/api/users', ensureApiRole('admin'), (req, res) => {
+    res.json({ users: users.map(u => ({ id: u.id, fio: u.fio, active: !!u.active, createdAt: u.createdAt || null })) });
+});
+
+app.post('/api/users', ensureApiRole('admin'), (req, res) => {
+    const { fio, pin } = req.body || {};
+    const cleanFio = String(fio || '').trim();
+    const cleanPin = String(pin || '').trim();
+    if (!cleanFio) return res.status(400).json({ error: 'Введите ФИО' });
+    if (!/^\d{4,10}$/.test(cleanPin)) return res.status(400).json({ error: 'ПИН должен быть 4-10 цифр' });
+    const nextId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
+    users.push({ id: nextId, fio: cleanFio, pinHash: hashPin(cleanPin), active: true, createdAt: new Date().toISOString() });
+    saveUsers();
+    res.json({ success: true });
+});
+
+app.put('/api/users/:id', ensureApiRole('admin'), (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const user = users.find(u => u.id === id);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    if (req.body && req.body.fio !== undefined) {
+        const cleanFio = String(req.body.fio || '').trim();
+        if (!cleanFio) return res.status(400).json({ error: 'Введите ФИО' });
+        user.fio = cleanFio;
+    }
+    if (req.body && req.body.pin !== undefined && String(req.body.pin || '').trim()) {
+        const cleanPin = String(req.body.pin || '').trim();
+        if (!/^\d{4,10}$/.test(cleanPin)) return res.status(400).json({ error: 'ПИН должен быть 4-10 цифр' });
+        user.pinHash = hashPin(cleanPin);
+    }
+    if (req.body && req.body.active !== undefined) {
+        user.active = !!req.body.active;
+    }
+    saveUsers();
+    res.json({ success: true });
 });
 
 function ensureRole(role) {
@@ -127,8 +214,25 @@ function ensureRole(role) {
             const target = role === 'admin' ? '/auth/login.html?role=admin' : '/auth/login.html?role=doctor';
             return res.redirect(target);
         }
+        req.user = payload;
         next();
     };
+}
+
+function ensureAnyRole(roles) {
+    return (req, res, next) => {
+        const cookies = parseCookies(req);
+        const payload = verifyToken(cookies.mtoken);
+        if (!payload || !roles.includes(payload.role)) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        req.user = payload;
+        next();
+    };
+}
+
+function ensureApiRole(role) {
+    return ensureAnyRole([role]);
 }
 
 app.get('/admin/admin.html', ensureRole('admin'), (req, res, next) => next());
@@ -335,8 +439,11 @@ const beds = Array(MAX_BEDS + 1).fill(null).map(() => ({
 
 // ==================== API ДЛЯ УПРАВЛЕНИЯ КОЙКАМИ ====================
 
-app.post('/api/control', (req, res) => {
+app.post('/api/control', ensureAnyRole(['admin', 'doctor']), (req, res) => {
     const { bed, action, minutes, operator = 'system', procedureName = null } = req.body;
+    const operatorName = (req.user && req.user.role === 'doctor' && req.user.fio)
+        ? req.user.fio
+        : ((req.user && req.user.role === 'admin' && req.user.sub) ? req.user.sub : operator);
     const bedId = parseInt(bed);
     
     if (bedId < 1 || bedId > MAX_BEDS) {
@@ -379,7 +486,7 @@ app.post('/api/control', (req, res) => {
                     stages: stages
                 };
 
-                logEvent(bedId, 'Старт', duration, operator, procedureName);
+                logEvent(bedId, 'Старт', duration, operatorName, procedureName);
                 break;
 
             case 'pause':
@@ -391,7 +498,7 @@ app.post('/api/control', (req, res) => {
                     status: 'paused',
                     remainingTime: bedData.endTime - Date.now()
                 };
-                logEvent(bedId, 'Пауза', Math.round(bedData.remainingTime / 60000), operator, bedData.procedureName);
+                logEvent(bedId, 'Пауза', Math.round(bedData.remainingTime / 60000), operatorName, bedData.procedureName);
                 break;
 
             case 'resume':
@@ -406,7 +513,7 @@ app.post('/api/control', (req, res) => {
                       endTime: Date.now() + bedData.remainingTime,
                       remainingTime: 0
                   };
-                  logEvent(bedId, 'Продолжить', Math.round(bedData.remainingTime / 60000), operator, bedData.procedureName);
+                  logEvent(bedId, 'Продолжить', Math.round(bedData.remainingTime / 60000), operatorName, bedData.procedureName);
               } else {
                   return res.status(400).json({ error: 'Невозможно продолжить: этап завершён. Используйте «Следующий этап».' });
               }
@@ -429,7 +536,7 @@ app.post('/api/control', (req, res) => {
                     currentStageIndex: null,
                     stages: []
                 };
-                logEvent(bedId, 'Стоп', stopDuration, operator, stopProc);
+                logEvent(bedId, 'Стоп', stopDuration, operatorName, stopProc);
                 break;
 
             case 'reset':
@@ -446,7 +553,7 @@ app.post('/api/control', (req, res) => {
                     currentStageIndex: null,
                     stages: []
                 };
-                logEvent(bedId, 'Сброс', resetDuration, operator, resetProc);
+                logEvent(bedId, 'Сброс', resetDuration, operatorName, resetProc);
                 break;
 
             case 'next_stage':
@@ -477,7 +584,7 @@ app.post('/api/control', (req, res) => {
                     remainingTime: 0
                 };
 
-                logEvent(bedId, 'Следующий этап', nextDuration, operator, procedureName);
+                logEvent(bedId, 'Следующий этап', nextDuration, operatorName, procedureName);
                 break;
 
             default:
@@ -592,9 +699,12 @@ wss.on('connection', (ws, req) => {
     const role = url.searchParams.get('role');
     const cookies = parseCookies(req);
     const payload = verifyToken(cookies.mtoken);
-    if (!payload || (role && payload.role !== role)) {
-        ws.close(4001, 'unauthorized');
-        return;
+    const needsAuth = role === 'admin' || role === 'doctor';
+    if (needsAuth) {
+        if (!payload || payload.role !== role) {
+            ws.close(4001, 'unauthorized');
+            return;
+        }
     }
 
     clients.set(ws, { bedId, role });
