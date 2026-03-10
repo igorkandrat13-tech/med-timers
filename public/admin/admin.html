@@ -201,9 +201,17 @@
         <span class="close-updates">&times;</span>
         <h2>🔄 Обновление системы</h2>
         <div id="updates-status" style="margin: 20px 0; font-size: 1.1em;"></div>
-        <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="update-confirm-btn" class="btn btn-add" style="display: none;">⬇️ Скачать и обновить</button>
-            <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
+        <div class="modal-actions" style="display: flex; gap: 10px; justify-content: space-between; align-items: center;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <label for="keep-releases" style="color: var(--text-muted); font-size: 0.9rem;">Оставить релизов:</label>
+                <input id="keep-releases" type="number" min="1" value="5" style="width:70px; padding:6px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);">
+                <button id="cleanup-btn" class="btn btn-download" title="Удалить старые релизы">🧹 Очистить</button>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button id="rollback-btn" class="btn btn-cancel" title="Откатить на предыдущую версию">↩️ Откат</button>
+                <button id="update-confirm-btn" class="btn btn-add" style="display: none;">⬇️ Скачать и обновить</button>
+                <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
+            </div>
         </div>
     </div>
 </div>

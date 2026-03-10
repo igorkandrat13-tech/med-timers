@@ -119,6 +119,52 @@ app.post('/api/updates/pull', (req, res) => {
     });
 });
 
+// Список последних коммитов (для информации/диагностики)
+app.get('/api/updates/commits', (req, res) => {
+    exec('git log -n 10 --pretty=format:%h|%ct|%s', (err, stdout, stderr) => {
+        if (err) {
+            console.error('Git log error:', err);
+            return res.status(500).json({ error: 'List commits failed', details: stderr });
+        }
+        const commits = String(stdout).split('\n').filter(Boolean).map(line => {
+            const [hash, ts, ...rest] = line.split('|');
+            return { hash, time: Number(ts) || null, subject: rest.join('|') || '' };
+        });
+        res.json({ commits });
+    });
+});
+
+// Откат на предыдущий коммит (legacy layout)
+app.post('/api/updates/rollback', (req, res) => {
+    exec('git rev-parse --short HEAD~1', (e1, prevHash) => {
+        if (e1) {
+            console.error('Git rev-parse error:', e1);
+            return res.status(400).json({ error: 'Rollback failed', details: 'Previous commit not found' });
+        }
+        exec('git reset --hard HEAD~1', (e2, out2, err2) => {
+            if (e2) {
+                console.error('Git reset error:', e2);
+                return res.status(500).json({ error: 'Rollback failed', details: err2 });
+            }
+            const msg = `Rolled back to ${String(prevHash).trim()}. Restarting server...`;
+            res.json({ success: true, message: msg });
+            setTimeout(() => process.exit(1), 1000);
+        });
+    });
+});
+
+// Очистка "старых релизов" (в legacy-режиме не используется)
+app.post('/api/updates/cleanup', (req, res) => {
+    // Для working-copy из git нет каталогов releases; делаем лёгкую очистку объектов
+    exec('git gc --prune=now', (err, stdout, stderr) => {
+        if (err) {
+            console.error('Git gc error:', err);
+            return res.status(500).json({ error: 'Cleanup failed', details: stderr });
+        }
+        res.json({ success: true, message: 'Cleanup completed (git gc)' });
+    });
+});
+
 // ==================== ХРАНЕНИЕ ДАННЫХ ====================
 
 // Журнал таймеров

@@ -8,6 +8,9 @@ export function initUpdates() {
     const confirmBtn = document.getElementById('update-confirm-btn');
     const statusDiv = document.getElementById('updates-status');
     const versionEl = document.getElementById('build-version');
+    const rollbackBtn = document.getElementById('rollback-btn');
+    const cleanupBtn = document.getElementById('cleanup-btn');
+    const keepInput = document.getElementById('keep-releases');
 
     if (!checkBtn || !modal) return;
 
@@ -81,6 +84,72 @@ export function initUpdates() {
         });
     }
 
+    // Кнопка отката
+    if (rollbackBtn) {
+        rollbackBtn.addEventListener('click', async () => {
+            rollbackBtn.disabled = true;
+            statusDiv.innerHTML = '<div style="text-align:center; padding: 12px;"><h3>↩️ Откат на предыдущую версию...</h3></div>';
+            try {
+                const res = await fetch('/api/updates/rollback', { method: 'POST' });
+                const text = await res.text();
+                let data = null;
+                try { data = JSON.parse(text); } catch(_) {}
+                if (res.ok && (data?.success || res.status === 200)) {
+                    statusDiv.innerHTML = `
+                      <div style="color: var(--success-color); text-align:center;">
+                        <h3>✅ Откат выполнен</h3>
+                        <p>${(data && data.message) ? data.message : 'Сервер перезагружается...'}</p>
+                      </div>`;
+                    setTimeout(() => window.location.reload(), 5000);
+                } else {
+                    const details = (data && (data.error || data.details)) ? `${data.error} — ${data.details || ''}` : text;
+                    throw new Error(details || `HTTP ${res.status}`);
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `
+                  <div style="color: var(--danger-color); text-align:center;">
+                    <h3>❌ Ошибка отката</h3>
+                    <p>${(e && e.message) ? e.message : 'Rollback failed'}</p>
+                  </div>`;
+            } finally {
+                rollbackBtn.disabled = false;
+            }
+        });
+    }
+
+    // Кнопка очистки
+    if (cleanupBtn) {
+        cleanupBtn.addEventListener('click', async () => {
+            const keep = Math.max(1, parseInt(keepInput?.value || '5', 10) || 5);
+            cleanupBtn.disabled = true;
+            statusDiv.innerHTML = '<div style="text-align:center; padding: 12px;"><h3>🧹 Очистка старых релизов...</h3></div>';
+            try {
+                const res = await fetch(`/api/updates/cleanup?keep=${keep}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const text = await res.text();
+                let data = null;
+                try { data = JSON.parse(text); } catch(_) {}
+                if (res.ok && (data?.success || res.status === 200)) {
+                    const removed = (data && data.removed) ? data.removed.join(', ') : '';
+                    statusDiv.innerHTML = `
+                      <div style="color: var(--success-color); text-align:center;">
+                        <h3>✅ Очистка завершена</h3>
+                        <p>${removed ? ('Удалено: ' + removed) : (data?.message || 'Готово')}</p>
+                      </div>`;
+                } else {
+                    const details = (data && (data.error || data.details)) ? `${data.error} — ${data.details || ''}` : text;
+                    throw new Error(details || `HTTP ${res.status}`);
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `
+                  <div style="color: var(--danger-color); text-align:center;">
+                    <h3>❌ Ошибка очистки</h3>
+                    <p>${(e && e.message) ? e.message : 'Cleanup failed'}</p>
+                  </div>`;
+            } finally {
+                cleanupBtn.disabled = false;
+            }
+        });
+    }
     async function checkUpdates() {
         try {
             const res = await fetch('/api/updates/check');
