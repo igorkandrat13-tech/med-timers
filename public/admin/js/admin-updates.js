@@ -84,16 +84,16 @@ export function initUpdates() {
     async function checkUpdates() {
         try {
             const res = await fetch('/api/updates/check');
-            
-            // Если сервер вернул не JSON (например, HTML с ошибкой Nginx 404/502), обрабатываем это
-            const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Сервер вернул некорректный ответ: ${res.status} ${res.statusText}`);
+            const contentType = res.headers.get('content-type') || '';
+            const rawText = await res.text();
+            let data = null;
+            if (contentType.includes('application/json')) {
+                try {
+                    data = JSON.parse(rawText);
+                } catch (_) {}
             }
-
-            const data = await res.json();
             
-            if (data.available) {
+            if (res.ok && data && data.available) {
                 statusDiv.innerHTML = `
                     <div style="color: var(--primary-color); text-align: center;">
                         <h3>🎉 Доступны обновления!</h3>
@@ -103,12 +103,21 @@ export function initUpdates() {
                 confirmBtn.style.display = 'inline-block';
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = '⬇️ Скачать и обновить';
-            } else if (data.error) {
+            } else if (data && data.error) {
                 statusDiv.innerHTML = `
                     <div style="color: var(--warning-color); text-align: center;">
                         <h3>⚠️ Ошибка проверки</h3>
                         <p>${data.error}</p>
                         <small>Убедитесь, что сервер запущен из Git-папки</small>
+                    </div>
+                `;
+            } else if (!res.ok) {
+                const trimmed = String(rawText || `HTTP ${res.status} ${res.statusText}`).trim();
+                const clipped = trimmed.length > 500 ? trimmed.slice(0, 500) + '…' : trimmed;
+                statusDiv.innerHTML = `
+                    <div style="color: var(--warning-color); text-align: center;">
+                        <h3>⚠️ Ошибка проверки</h3>
+                        <p>${clipped}</p>
                     </div>
                 `;
             } else {
