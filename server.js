@@ -336,14 +336,14 @@ app.post('/api/updates/pull', ensureApiRole('admin'), (req, res) => {
 
 // Список последних коммитов (для информации/диагностики)
 app.get('/api/updates/commits', ensureApiRole('admin'), (req, res) => {
-    execInRepo('git log -n 10 --pretty=format:%h|%ct|%s', (err, stdout, stderr) => {
+    execInRepo('git log -n 10 --pretty=format:%h%x1f%ct%x1f%s', (err, stdout, stderr) => {
         if (err) {
             console.error('Git log error:', err);
             return res.status(500).json({ error: 'List commits failed', details: stderr });
         }
         const commits = String(stdout).split('\n').filter(Boolean).map(line => {
-            const [hash, ts, ...rest] = line.split('|');
-            return { hash, time: Number(ts) || null, subject: rest.join('|') || '' };
+            const [hash, ts, ...rest] = line.split('\x1f');
+            return { hash, time: Number(ts) || null, subject: rest.join('\x1f') || '' };
         });
         res.json({ commits });
     });
@@ -357,14 +357,14 @@ app.get('/api/updates/releases', ensureApiRole('admin'), (req, res) => {
             return res.status(500).json({ error: 'Releases failed', details: 'Cannot get HEAD' });
         }
         const headFull = String(headStdout || '').trim();
-        execInRepo(`git log -n ${limit} --pretty=format:%h|%H|%ct|%s`, (err, stdout, stderr) => {
+        execInRepo(`git log -n ${limit} --pretty=format:%h%x1f%H%x1f%ct%x1f%s`, (err, stdout, stderr) => {
             if (err) {
                 return res.status(500).json({ error: 'Releases failed', details: stderr });
             }
             const lines = String(stdout || '').split('\n').filter(Boolean);
             const releases = lines.map(line => {
-                const [shortHash, fullHash, ts, ...rest] = line.split('|');
-                const message = rest.join('|');
+                const [shortHash, fullHash, ts, ...rest] = line.split('\x1f');
+                const message = rest.join('\x1f');
                 const time = parseInt(ts, 10);
                 return {
                     hash: String(fullHash || '').trim(),
