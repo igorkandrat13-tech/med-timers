@@ -23,7 +23,11 @@ function setEventsCollapsed(collapsed) {
   document.body.classList.toggle('events-collapsed', collapsed);
   writeBool('doctor.eventsCollapsed', collapsed);
   const btn = document.getElementById('events-toggle');
-  if (btn) btn.textContent = collapsed ? 'Журнал ▸' : 'Журнал ◂';
+  if (btn) {
+    btn.textContent = collapsed ? '▸' : 'Журнал ◂';
+    btn.setAttribute('aria-label', collapsed ? 'Открыть журнал' : 'Свернуть журнал');
+    btn.title = collapsed ? 'Открыть журнал' : 'Свернуть журнал';
+  }
 }
 
 function initEventsToggle() {

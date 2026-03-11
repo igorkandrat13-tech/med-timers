@@ -653,6 +653,7 @@ header h1 {
 
 body.events-collapsed .sidebar-right {
     padding: 10px 8px;
+    overflow-x: hidden;
 }
 
 body.events-collapsed .events-title {
@@ -669,6 +670,20 @@ body.events-collapsed .sidebar-right .btn-clear:not(#events-toggle) {
 
 #events-toggle {
     min-width: 44px;
+}
+
+body.events-collapsed .events-header {
+    justify-content: center;
+}
+
+body.events-collapsed .events-actions {
+    width: 100%;
+    justify-content: center;
+}
+
+body.events-collapsed #events-toggle {
+    width: 100%;
+    justify-content: center;
 }
 
 .events-list .event-item {
