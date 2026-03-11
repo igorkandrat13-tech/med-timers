@@ -20,10 +20,10 @@ function initListeners() {
 
     const addBtn = document.getElementById('add-user-btn');
     const cancelBtn = document.getElementById('cancel-edit-user-btn');
+    const fioEl = document.getElementById('add-user-fio');
+    const pinEl = document.getElementById('add-user-pin');
     if (addBtn) {
         addBtn.addEventListener('click', async () => {
-            const fioEl = document.getElementById('add-user-fio');
-            const pinEl = document.getElementById('add-user-pin');
             const editIdEl = document.getElementById('edit-user-id');
             const isEdit = !!(editIdEl && String(editIdEl.value || '').trim());
             const fio = fioEl ? fioEl.value.trim() : '';
@@ -41,6 +41,7 @@ function initListeners() {
                     const id = parseInt(editIdEl.value, 10);
                     const body = { fio };
                     if (pin) body.pin = pin;
+                    addBtn.disabled = true;
                     await apiRequest(`/api/users/${id}`, {
                         method: 'PUT',
                         body: JSON.stringify(body)
@@ -52,6 +53,7 @@ function initListeners() {
                         showNotification('ПИН должен быть 4-10 цифр', 'error');
                         return;
                     }
+                    addBtn.disabled = true;
                     await apiRequest('/api/users', {
                         method: 'POST',
                         body: JSON.stringify({ fio, pin })
@@ -63,6 +65,8 @@ function initListeners() {
                 loadUsers();
             } catch (e) {
                 showNotification(e.message || 'Ошибка добавления', 'error');
+            } finally {
+                addBtn.disabled = false;
             }
         });
     }
@@ -71,6 +75,16 @@ function initListeners() {
         cancelBtn.addEventListener('click', () => {
             setEditMode(null);
         });
+    }
+
+    // Enter запускает действие добавления/сохранения
+    if (fioEl && !fioEl._enterBound) {
+        fioEl._enterBound = true;
+        fioEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn?.click(); });
+    }
+    if (pinEl && !pinEl._enterBound) {
+        pinEl._enterBound = true;
+        pinEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn?.click(); });
     }
 }
 

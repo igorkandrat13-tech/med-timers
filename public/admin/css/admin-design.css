@@ -466,10 +466,10 @@ tr:last-child td {
 
 /* ==================== USERS MODAL LAYOUT ==================== */
 #users-modal .user-form-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 180px auto;
   gap: 10px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  align-items: end;
   margin-bottom: 12px;
 }
 
@@ -489,6 +489,7 @@ tr:last-child td {
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: flex-start;
 }
 
 #users-modal .users-footnote {
@@ -497,16 +498,24 @@ tr:last-child td {
   font-size: 0.9rem;
 }
 
+/* Единая высота полей и кнопок в строке формы */
+#users-modal .user-form-row input[type="text"],
+#users-modal .user-form-row input[type="password"],
+#users-modal .user-form-row input[type="number"] {
+  height: 38px;
+}
+#users-modal .user-form-actions .btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
 @media (max-width: 640px) {
-  #users-modal .user-form-col-narrow {
-    width: 100%;
-    flex: 1 1 200px;
+  #users-modal .user-form-row {
+    grid-template-columns: 1fr;
   }
-  #users-modal .user-form-actions {
-    width: 100%;
-    justify-content: flex-start;
-    gap: 10px;
-  }
+  #users-modal .user-form-col-narrow { width: 100%; flex: 1 1 200px; }
+  #users-modal .user-form-actions { width: 100%; justify-content: flex-start; gap: 10px; }
 }
 
 
