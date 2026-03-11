@@ -79,20 +79,8 @@
       <button class="modal-close" id="users-close-x">×</button>
     </div>
     <div class="modal-body">
-      <div class="user-form-row">
-        <div class="form-group user-form-col">
-          <label id="user-fio-label">ФИО *</label>
-          <input type="text" id="add-user-fio" placeholder="Иванов Иван Иванович">
-        </div>
-        <div class="form-group user-form-col-narrow">
-          <label id="user-pin-label">ПИН-код *</label>
-          <input type="password" id="add-user-pin" placeholder="4-10 цифр" inputmode="numeric">
-        </div>
-        <input type="hidden" id="edit-user-id" value="">
-        <div class="user-form-actions">
-          <button class="btn btn-add" id="add-user-btn">➕ Добавить</button>
-          <button class="btn btn-cancel" id="cancel-edit-user-btn" style="display:none;">Отмена</button>
-        </div>
+      <div class="users-toolbar">
+        <button class="btn btn-add" id="open-add-user-btn">➕ Добавить пользователя</button>
       </div>
       <table class="users-table">
         <thead>
@@ -117,6 +105,55 @@
     </div>
   </div>
   </div>
+
+<!-- Модалка: Добавить пользователя -->
+<div id="add-user-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>➕ Добавить пользователя</h2>
+      <button class="modal-close" id="add-user-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>ФИО *</label>
+        <input type="text" id="add-fio" placeholder="Иванов Иван Иванович">
+      </div>
+      <div class="form-group">
+        <label>ПИН-код *</label>
+        <input type="password" id="add-pin" placeholder="4-10 цифр" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-cancel" id="add-user-cancel">Отмена</button>
+      <button class="btn btn-save" id="add-user-save">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: Редактировать пользователя -->
+<div id="edit-user-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>✏️ Редактировать пользователя</h2>
+      <button class="modal-close" id="edit-user-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-id">
+      <div class="form-group">
+        <label>ФИО *</label>
+        <input type="text" id="edit-fio" placeholder="Иванов Иван Иванович">
+      </div>
+      <div class="form-group">
+        <label>Новый ПИН (необязательно)</label>
+        <input type="password" id="edit-pin" placeholder="Оставьте пустым, чтобы не менять" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-cancel" id="edit-user-cancel">Отмена</button>
+      <button class="btn btn-save" id="edit-user-save">Сохранить</button>
+    </div>
+  </div>
+</div>
 
 <!-- =============== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ПРОЦЕДУРЫ =============== -->
 <div id="add-procedure-modal" class="modal" style="display:none;">

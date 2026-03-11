@@ -498,6 +498,13 @@ tr:last-child td {
   font-size: 0.9rem;
 }
 
+/* Панель действий над списком пользователей */
+#users-modal .users-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 /* Единая высота полей и кнопок в строке формы */
 #users-modal .user-form-row input[type="text"],
 #users-modal .user-form-row input[type="password"],

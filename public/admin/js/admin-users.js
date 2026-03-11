@@ -18,74 +18,84 @@ function initListeners() {
     if (listenersInitialized) return;
     listenersInitialized = true;
 
-    const addBtn = document.getElementById('add-user-btn');
-    const cancelBtn = document.getElementById('cancel-edit-user-btn');
-    const fioEl = document.getElementById('add-user-fio');
-    const pinEl = document.getElementById('add-user-pin');
-    if (addBtn) {
-        addBtn.addEventListener('click', async () => {
-            const editIdEl = document.getElementById('edit-user-id');
-            const isEdit = !!(editIdEl && String(editIdEl.value || '').trim());
-            const fio = fioEl ? fioEl.value.trim() : '';
-            const pin = pinEl ? pinEl.value.trim() : '';
-            if (!fio) {
-                showNotification('Введите ФИО', 'error');
-                return;
-            }
-            try {
-                if (isEdit) {
-                    if (pin && !/^\d{4,10}$/.test(pin)) {
-                        showNotification('ПИН должен быть 4-10 цифр', 'error');
-                        return;
-                    }
-                    const id = parseInt(editIdEl.value, 10);
-                    const body = { fio };
-                    if (pin) body.pin = pin;
-                    addBtn.disabled = true;
-                    await apiRequest(`/api/users/${id}`, {
-                        method: 'PUT',
-                        body: JSON.stringify(body)
-                    });
-                    showNotification('Пользователь обновлён', 'success');
-                    setEditMode(null);
-                } else {
-                    if (!/^\d{4,10}$/.test(pin)) {
-                        showNotification('ПИН должен быть 4-10 цифр', 'error');
-                        return;
-                    }
-                    addBtn.disabled = true;
-                    await apiRequest('/api/users', {
-                        method: 'POST',
-                        body: JSON.stringify({ fio, pin })
-                    });
-                    showNotification('Пользователь добавлен', 'success');
-                    if (fioEl) fioEl.value = '';
-                    if (pinEl) pinEl.value = '';
-                }
-                loadUsers();
-            } catch (e) {
-                showNotification(e.message || 'Ошибка добавления', 'error');
-            } finally {
-                addBtn.disabled = false;
-            }
-        });
+    // Кнопка "Добавить пользователя" (открыть модалку)
+    const openAddBtn = document.getElementById('open-add-user-btn');
+    const addModal = document.getElementById('add-user-modal');
+    const addCloseX = document.getElementById('add-user-close-x');
+    const addCancel = document.getElementById('add-user-cancel');
+    const addSave = document.getElementById('add-user-save');
+    const addFio = document.getElementById('add-fio');
+    const addPin = document.getElementById('add-pin');
+
+    const editModal = document.getElementById('edit-user-modal');
+    const editCloseX = document.getElementById('edit-user-close-x');
+    const editCancel = document.getElementById('edit-user-cancel');
+    const editSave = document.getElementById('edit-user-save');
+    const editFio = document.getElementById('edit-fio');
+    const editPin = document.getElementById('edit-pin');
+    const editIdEl = document.getElementById('edit-user-id');
+
+    function openAddUserModal() {
+        if (!addModal) return;
+        if (addFio) addFio.value = '';
+        if (addPin) addPin.value = '';
+        addModal.style.display = 'flex';
+        addFio?.focus();
+    }
+    function closeAddUserModal() { if (addModal) addModal.style.display = 'none'; }
+    async function submitAddUser() {
+        const fio = addFio?.value.trim() || '';
+        const pin = addPin?.value.trim() || '';
+        if (!fio) return showNotification('Введите ФИО', 'error');
+        if (!/^\d{4,10}$/.test(pin)) return showNotification('ПИН должен быть 4-10 цифр', 'error');
+        addSave.disabled = true;
+        try {
+            await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ fio, pin }) });
+            showNotification('Пользователь добавлен', 'success');
+            closeAddUserModal();
+            loadUsers();
+        } catch (e) {
+            showNotification(e.message || 'Ошибка добавления', 'error');
+        } finally {
+            addSave.disabled = false;
+        }
     }
 
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            setEditMode(null);
-        });
+    function closeEditUserModal() { if (editModal) editModal.style.display = 'none'; }
+    async function submitEditUser() {
+        const id = parseInt(editIdEl?.value || '0', 10);
+        const fio = editFio?.value.trim() || '';
+        const pin = editPin?.value.trim() || '';
+        if (!id) return;
+        if (!fio) return showNotification('Введите ФИО', 'error');
+        if (pin && !/^\d{4,10}$/.test(pin)) return showNotification('ПИН должен быть 4-10 цифр', 'error');
+        editSave.disabled = true;
+        try {
+            const body = { fio };
+            if (pin) body.pin = pin;
+            await apiRequest(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+            showNotification('Пользователь обновлён', 'success');
+            closeEditUserModal();
+            loadUsers();
+        } catch (e) {
+            showNotification(e.message || 'Ошибка обновления', 'error');
+        } finally {
+            editSave.disabled = false;
+        }
     }
 
-    // Enter запускает действие добавления/сохранения
-    if (fioEl && !fioEl._enterBound) {
-        fioEl._enterBound = true;
-        fioEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn?.click(); });
-    }
-    if (pinEl && !pinEl._enterBound) {
-        pinEl._enterBound = true;
-        pinEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn?.click(); });
-    }
+    openAddBtn?.addEventListener('click', openAddUserModal);
+    addCloseX?.addEventListener('click', closeAddUserModal);
+    addCancel?.addEventListener('click', closeAddUserModal);
+    addSave?.addEventListener('click', submitAddUser);
+    addFio?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddUser(); });
+    addPin?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddUser(); });
+
+    editCloseX?.addEventListener('click', closeEditUserModal);
+    editCancel?.addEventListener('click', closeEditUserModal);
+    editSave?.addEventListener('click', submitEditUser);
+    editFio?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEditUser(); });
+    editPin?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEditUser(); });
 }
 
 function renderUsersTable(users) {
@@ -119,39 +129,6 @@ function escapeHtml(str) {
 
 window.loadUsers = loadUsers;
 
-function setEditMode(user) {
-    const fioEl = document.getElementById('add-user-fio');
-    const pinEl = document.getElementById('add-user-pin');
-    const editIdEl = document.getElementById('edit-user-id');
-    const addBtn = document.getElementById('add-user-btn');
-    const cancelBtn = document.getElementById('cancel-edit-user-btn');
-    const fioLabel = document.getElementById('user-fio-label');
-    const pinLabel = document.getElementById('user-pin-label');
-
-    if (!fioEl || !pinEl || !editIdEl || !addBtn || !cancelBtn || !fioLabel || !pinLabel) return;
-
-    if (!user) {
-        editIdEl.value = '';
-        fioEl.value = '';
-        pinEl.value = '';
-        pinEl.placeholder = '4-10 цифр';
-        fioLabel.textContent = 'ФИО *';
-        pinLabel.textContent = 'ПИН-код *';
-        addBtn.textContent = '➕ Добавить';
-        cancelBtn.style.display = 'none';
-        return;
-    }
-
-    editIdEl.value = String(user.id);
-    fioEl.value = user.fio || '';
-    pinEl.value = '';
-    pinEl.placeholder = 'Оставьте пустым, чтобы не менять';
-    fioLabel.textContent = `ФИО (ID ${user.id}) *`;
-    pinLabel.textContent = 'Новый ПИН (необязательно)';
-    addBtn.textContent = '💾 Сохранить';
-    cancelBtn.style.display = 'inline-block';
-}
-
 window.editUser = async (id) => {
     let user = usersCache.find(u => u.id === id);
     if (!user) {
@@ -165,7 +142,16 @@ window.editUser = async (id) => {
         }
     }
     if (!user) return;
-    setEditMode(user);
+    const modal = document.getElementById('edit-user-modal');
+    const editFio = document.getElementById('edit-fio');
+    const editPin = document.getElementById('edit-pin');
+    const editIdEl = document.getElementById('edit-user-id');
+    if (!modal || !editFio || !editIdEl) return;
+    editIdEl.value = String(user.id);
+    editFio.value = user.fio || '';
+    if (editPin) editPin.value = '';
+    modal.style.display = 'flex';
+    editFio.focus();
 };
 
 window.toggleUser = async (id, active) => {
@@ -175,9 +161,11 @@ window.toggleUser = async (id, active) => {
             body: JSON.stringify({ active: !!active })
         });
         showNotification(active ? 'Пользователь активирован' : 'Пользователь деактивирован', 'success');
+        // если редактируется тот же пользователь — просто закрыть модалку
         const editIdEl = document.getElementById('edit-user-id');
-        if (editIdEl && parseInt(editIdEl.value || '', 10) === id && !active) {
-            setEditMode(null);
+        const editModal = document.getElementById('edit-user-modal');
+        if (editIdEl && parseInt(editIdEl.value || '', 10) === id && !active && editModal) {
+            editModal.style.display = 'none';
         }
         loadUsers();
     } catch (e) {
