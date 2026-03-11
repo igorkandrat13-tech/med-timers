@@ -464,6 +464,51 @@ tr:last-child td {
   justify-content: center;
 }
 
+/* ==================== USERS MODAL LAYOUT ==================== */
+#users-modal .user-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+#users-modal .user-form-col {
+  margin: 0;
+  min-width: 240px;
+  flex: 1 1 260px;
+}
+
+#users-modal .user-form-col-narrow {
+  margin: 0;
+  width: 180px;
+  flex: 0 0 180px;
+}
+
+#users-modal .user-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#users-modal .users-footnote {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  #users-modal .user-form-col-narrow {
+    width: 100%;
+    flex: 1 1 200px;
+  }
+  #users-modal .user-form-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+}
+
 
 /* ==================== STAGES ==================== */
 .stage-item {

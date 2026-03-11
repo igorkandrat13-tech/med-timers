@@ -38,5 +38,25 @@ export function initModalHandlers() {
     import('./admin-users.js').then(module => {
       module.loadUsers();
     });
+    const modal = document.getElementById('users-modal');
+    const closeX = document.getElementById('users-close-x');
+    const closeBtn = document.getElementById('users-close-btn');
+    if (modal && !modal._usersBound) {
+      modal._usersBound = true;
+      modal.addEventListener('click', (e) => { if (e.target === modal) window.closeUsersModal(); });
+    }
+    if (closeX && !closeX._usersBound) {
+      closeX._usersBound = true;
+      closeX.addEventListener('click', () => window.closeUsersModal());
+    }
+    if (closeBtn && !closeBtn._usersBound) {
+      closeBtn._usersBound = true;
+      closeBtn.addEventListener('click', () => window.closeUsersModal());
+    }
+  };
+
+  window.closeUsersModal = () => {
+    const m = document.getElementById('users-modal');
+    if (m) m.style.display = 'none';
   };
 }

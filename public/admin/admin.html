@@ -72,27 +72,29 @@
 </div>
 
 <!-- Модальное окно пользователей -->
-<div id="users-modal" class="modal" style="display: none;">
+<div id="users-modal" class="modal" style="display:none;">
   <div class="modal-content">
     <div class="modal-header">
       <h2>👤 Пользователи</h2>
-      <button class="modal-close">×</button>
+      <button class="modal-close" id="users-close-x">×</button>
     </div>
     <div class="modal-body">
-      <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom: 12px;">
-        <div class="form-group" style="margin:0; min-width: 240px;">
+      <div class="user-form-row">
+        <div class="form-group user-form-col">
           <label id="user-fio-label">ФИО *</label>
           <input type="text" id="add-user-fio" placeholder="Иванов Иван Иванович">
         </div>
-        <div class="form-group" style="margin:0; width: 180px;">
+        <div class="form-group user-form-col-narrow">
           <label id="user-pin-label">ПИН-код *</label>
           <input type="password" id="add-user-pin" placeholder="4-10 цифр" inputmode="numeric">
         </div>
         <input type="hidden" id="edit-user-id" value="">
-        <button class="btn btn-add" id="add-user-btn">➕ Добавить</button>
-        <button class="btn btn-cancel" id="cancel-edit-user-btn" style="display:none;">Отмена</button>
+        <div class="user-form-actions">
+          <button class="btn btn-add" id="add-user-btn">➕ Добавить</button>
+          <button class="btn btn-cancel" id="cancel-edit-user-btn" style="display:none;">Отмена</button>
+        </div>
       </div>
-      <table>
+      <table class="users-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -103,12 +105,18 @@
         </thead>
         <tbody id="users-table-body"></tbody>
       </table>
-      <div style="margin-top: 10px; color: var(--text-muted); font-size: 0.9rem;">
+      <div class="users-footnote">
         ПИН хранится на сервере в виде хеша. Чтобы изменить ПИН, используйте «✏️».
       </div>
     </div>
+    <div class="modal-actions">
+      <div></div>
+      <div>
+        <button class="btn btn-cancel" id="users-close-btn">Закрыть</button>
+      </div>
+    </div>
   </div>
-</div>
+  </div>
 
 <!-- =============== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ПРОЦЕДУРЫ =============== -->
 <div id="add-procedure-modal" class="modal" style="display:none;">
