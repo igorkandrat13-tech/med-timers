@@ -347,6 +347,7 @@ tr:last-child td {
 }
 
 .form-group input[type="text"],
+.form-group input[type="password"],
 .form-group input[type="number"],
 .form-group select {
   width: 100%;
@@ -418,6 +419,16 @@ tr:last-child td {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+#updates-modal .updates-actions-right {
+  margin-left: auto;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+}
+
+#updates-modal .updates-actions-right #update-close-btn {
+  margin-left: auto;
 }
 
 @media (max-width: 640px) {
@@ -501,8 +512,20 @@ tr:last-child td {
 /* Панель действий над списком пользователей */
 #users-modal .users-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
+}
+
+#users-modal .users-search {
+  width: min(380px, 100%);
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 /* Единая высота полей и кнопок в строке формы */
@@ -568,28 +591,23 @@ tr:last-child td {
   50% { opacity: 0.5; }
 }
 
-/* ==================== UPDATES MODAL ==================== */
-#updates-modal .modal-content {
-    max-width: 500px;
-    text-align: center;
-}
-
+/* ==================== UPDATES STATUS ==================== */
 #updates-status {
-    padding: 20px;
-    background: var(--bg-panel);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+  padding: 20px;
+  background: var(--bg-panel);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .updates-loading::after {
-    content: " ⏳";
-    animation: spin 1s infinite linear;
-    display: inline-block;
+  content: " ⏳";
+  animation: spin 1s infinite linear;
+  display: inline-block;
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ==================== RESPONSIVE ==================== */

@@ -7,11 +7,18 @@ export async function loadUsers() {
     try {
         const data = await apiRequest('/api/users');
         usersCache = data.users || [];
-        renderUsersTable(usersCache);
+        renderUsersTable(getFilteredUsers());
         initListeners();
     } catch (e) {
         showNotification(e.message || 'Ошибка загрузки пользователей', 'error');
     }
+}
+
+function getFilteredUsers() {
+    const searchEl = document.getElementById('users-search');
+    const q = String(searchEl?.value || '').trim().toLowerCase();
+    if (!q) return usersCache;
+    return usersCache.filter(u => String(u.fio || '').toLowerCase().includes(q));
 }
 
 function initListeners() {
@@ -34,6 +41,7 @@ function initListeners() {
     const editFio = document.getElementById('edit-fio');
     const editPin = document.getElementById('edit-pin');
     const editIdEl = document.getElementById('edit-user-id');
+    const searchEl = document.getElementById('users-search');
 
     function openAddUserModal() {
         if (!addModal) return;
@@ -90,12 +98,18 @@ function initListeners() {
     addSave?.addEventListener('click', submitAddUser);
     addFio?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddUser(); });
     addPin?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddUser(); });
+    addModal?.addEventListener('click', (e) => { if (e.target === addModal) closeAddUserModal(); });
 
     editCloseX?.addEventListener('click', closeEditUserModal);
     editCancel?.addEventListener('click', closeEditUserModal);
     editSave?.addEventListener('click', submitEditUser);
     editFio?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEditUser(); });
     editPin?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEditUser(); });
+    editModal?.addEventListener('click', (e) => { if (e.target === editModal) closeEditUserModal(); });
+
+    searchEl?.addEventListener('input', () => {
+        renderUsersTable(getFilteredUsers());
+    });
 }
 
 function renderUsersTable(users) {
@@ -155,6 +169,11 @@ window.editUser = async (id) => {
 };
 
 window.toggleUser = async (id, active) => {
+    if (!active) {
+        const user = usersCache.find(u => u.id === id);
+        const fio = user ? user.fio : '';
+        if (!confirm(`Деактивировать пользователя${fio ? ` «${fio}»` : ''}?`)) return;
+    }
     try {
         await apiRequest(`/api/users/${id}`, {
             method: 'PUT',
