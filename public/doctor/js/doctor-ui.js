@@ -13,7 +13,7 @@ function updateLayoutVars() {
   const selector = document.querySelector('.procedure-selector');
   const headerH = header ? header.getBoundingClientRect().height : 0;
   const selectorH = selector ? selector.getBoundingClientRect().height : 0;
-  const root = document.documentElement;
+  const root = document.body || document.documentElement;
   root.style.setProperty('--doctor-header-height', `${Math.round(headerH)}px`);
   root.style.setProperty('--doctor-procedure-height', `${Math.round(selectorH)}px`);
   root.style.setProperty('--doctor-sticky-offset', `${Math.round(headerH + selectorH)}px`);
@@ -36,16 +36,14 @@ function initEventsToggle() {
 }
 
 function initScrollButtons() {
-  const grid = document.getElementById('beds-grid');
   const topBtn = document.getElementById('scroll-top');
   const bottomBtn = document.getElementById('scroll-bottom');
-  if (!grid) return;
 
   topBtn?.addEventListener('click', () => {
-    grid.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   bottomBtn?.addEventListener('click', () => {
-    grid.scrollTo({ top: grid.scrollHeight, behavior: 'smooth' });
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
   });
 }
 
@@ -69,5 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateLayoutVars();
   updateActiveCount();
   window.addEventListener('resize', () => updateLayoutVars(), { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(updateLayoutVars, 50), { passive: true });
+  window.addEventListener('load', () => setTimeout(updateLayoutVars, 0), { passive: true });
+  setTimeout(updateLayoutVars, 250);
 });
-

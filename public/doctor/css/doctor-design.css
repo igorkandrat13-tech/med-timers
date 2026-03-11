@@ -610,6 +610,7 @@ header h1 {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .events-title {
@@ -623,6 +624,9 @@ header h1 {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-left: auto;
 }
 
 .sidebar-right .btn-clear {
@@ -633,6 +637,7 @@ header h1 {
     font-size: 0.85rem;
     border-radius: 4px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .sidebar-right .btn-clear:hover {
@@ -948,13 +953,89 @@ body.events-collapsed .sidebar-right .btn-clear:not(#events-toggle) {
     flex-wrap: wrap;
 }
 
-#procedure-search {
-    width: 220px;
-    padding: 10px;
+/* ==================== SEARCHABLE PROCEDURE DROPDOWN ==================== */
+.procedure-combobox {
+    position: relative;
+    min-width: 320px;
+    max-width: 520px;
+    flex: 1 1 320px;
+}
+
+.procedure-combobox-btn {
+    width: 100%;
+    padding: 10px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--bg-card);
     color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 1rem;
+}
+
+.procedure-caret {
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.procedure-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-hover);
+    z-index: 999;
+    padding: 10px;
+}
+
+.procedure-search {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-body);
+    color: var(--text-main);
+}
+
+.procedure-options {
+    margin-top: 10px;
+    max-height: 260px;
+    overflow: auto;
+}
+
+.procedure-option {
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-main);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.procedure-option:hover {
+    background: var(--bg-body);
+}
+
+.procedure-option.selected {
+    border-color: var(--primary-color);
+    background: rgba(0, 123, 255, 0.08);
+}
+
+.procedure-option-empty {
+    padding: 10px;
+    color: var(--text-muted);
+}
+
+.procedure-native-select {
+    display: none;
 }
 
 .active-count {

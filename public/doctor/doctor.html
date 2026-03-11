@@ -46,10 +46,19 @@
 <div class="procedure-selector">
   <div class="procedure-controls">
     <label for="global-procedure-select">Процедура:</label>
-    <select id="global-procedure-select">
-      <option value="">-- Выберите процедуру --</option>
-    </select>
-    <input id="procedure-search" type="text" placeholder="Поиск..." autocomplete="off">
+    <div class="procedure-combobox" id="procedure-combobox">
+      <button type="button" id="procedure-combobox-btn" class="procedure-combobox-btn" aria-haspopup="listbox" aria-expanded="false">
+        <span id="procedure-selected-label">-- Выберите процедуру --</span>
+        <span class="procedure-caret" aria-hidden="true">▾</span>
+      </button>
+      <div id="procedure-dropdown" class="procedure-dropdown hidden" role="listbox">
+        <input id="procedure-search" type="text" class="procedure-search" placeholder="Поиск..." autocomplete="off">
+        <div id="procedure-options" class="procedure-options"></div>
+      </div>
+      <select id="global-procedure-select" class="procedure-native-select" tabindex="-1" aria-hidden="true">
+        <option value="">-- Выберите процедуру --</option>
+      </select>
+    </div>
   </div>
 </div>
 
