@@ -981,9 +981,3 @@ header h1 {
 #control-panel {
     display: none !important;
 }
-
-/* Растягиваем сетку коек на всю ширину */
-.beds-grid {
-    margin-right: 0 !important; /* Убираем отступ, который был зарезервирован под панель */
-    padding-right: 20px;
-}
