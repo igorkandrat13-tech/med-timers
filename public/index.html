@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Med Timers</title>
+  <link rel="stylesheet" href="/admin/css/admin-design.css">
+  <link rel="stylesheet" href="/auth/auth.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-card" aria-label="Выбор кабинета">
+      <div class="auth-header">
+        <div class="auth-title-row">
+          <div class="auth-logo" aria-hidden="true">🕗</div>
+          <div>
+            <div class="auth-title">Med Timers</div>
+            <div class="auth-subtitle">Выберите режим входа</div>
+          </div>
+        </div>
+        <div class="auth-badge">Вход</div>
+      </div>
+
+      <div class="auth-body" style="gap: 10px;">
+        <a class="btn btn-save auth-submit" href="/auth/login.html?role=admin" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:10px;">
+          <span aria-hidden="true">🛠️</span>
+          <span>Админка</span>
+        </a>
+        <a class="btn btn-add auth-submit" href="/auth/login.html?role=doctor" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:10px;">
+          <span aria-hidden="true">🩺</span>
+          <span>Планшет врача</span>
+        </a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
