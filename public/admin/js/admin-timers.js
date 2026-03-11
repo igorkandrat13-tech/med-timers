@@ -216,6 +216,20 @@ export function closeSelectProcedureModal() {
     modalTargetBedId = null;
 }
 
+// Привязка кнопок закрытия/действий в модалке выбора процедуры
+document.addEventListener('DOMContentLoaded', () => {
+    const closeX = document.getElementById('select-procedure-close-x');
+    const cancelBtn = document.getElementById('select-procedure-cancel');
+    const startBtn = document.getElementById('select-procedure-start');
+    const modal = document.getElementById('select-procedure-modal');
+    if (closeX && !closeX._spb) { closeX._spb = true; closeX.addEventListener('click', closeSelectProcedureModal); }
+    if (cancelBtn && !cancelBtn._spb) { cancelBtn._spb = true; cancelBtn.addEventListener('click', closeSelectProcedureModal); }
+    if (startBtn && !startBtn._spb) { startBtn._spb = true; startBtn.addEventListener('click', launchProcedureOnBed); }
+    if (modal && !modal._spb) {
+        modal._spb = true;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeSelectProcedureModal(); });
+    }
+});
 export async function launchProcedureOnBed() {
     const select = document.getElementById('modal-procedure-select');
     const procId = select.value;

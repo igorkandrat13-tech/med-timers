@@ -435,6 +435,36 @@ tr:last-child td {
   }
 }
 
+/* ==================== QR MODAL LAYOUT ==================== */
+#qr-modal .qr-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+#qr-modal .qr-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+#qr-modal .qr-url {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+#qr-modal .qr-container {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+}
+
+
 /* ==================== STAGES ==================== */
 .stage-item {
   background: var(--bg-table-head); /* Используем фон заголовка таблицы для контраста */

@@ -192,28 +192,28 @@
 
 <!-- МОДАЛЬНОЕ ОКНО ВЫБОРА ПРОЦЕДУРЫ -->
 <div id="select-procedure-modal" class="modal" style="display: none;">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h2>▶ Запуск процедуры на койке <span id="modal-bed-id">N</span></h2>
-            <button class="modal-close" onclick="closeSelectProcedureModal()">×</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label>Выберите процедуру:</label>
-                <select id="modal-procedure-select" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="">-- Выберите процедуру --</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Длительность (мин):</label>
-                <input type="number" id="modal-procedure-duration" min="1" readonly style="background: #f8f9fa;">
-            </div>
-        </div>
-        <div class="form-actions">
-            <button class="btn btn-cancel" onclick="closeSelectProcedureModal()">❌ Отмена</button>
-            <button class="btn btn-start" onclick="launchProcedureOnBed()">▶ Запустить</button>
-        </div>
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>▶ Запуск процедуры на койке <span id="modal-bed-id">N</span></h2>
+      <button class="modal-close" id="select-procedure-close-x">×</button>
     </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Выберите процедуру:</label>
+        <select id="modal-procedure-select">
+          <option value="">-- Выберите процедуру --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Длительность (мин):</label>
+        <input type="number" id="modal-procedure-duration" min="1" readonly>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-cancel" id="select-procedure-cancel">❌ Отмена</button>
+      <button class="btn btn-start" id="select-procedure-start">▶ Запустить</button>
+    </div>
+  </div>
 </div>
 
 <!-- МОДАЛЬНОЕ ОКНО QR-КОДОВ -->
@@ -221,41 +221,43 @@
   <div class="modal-content modal-small">
     <div class="modal-header">
       <h2>🔗 Быстрый доступ</h2>
-      <button class="modal-close" onclick="document.getElementById('qr-modal').style.display='none'">×</button>
+      <button class="modal-close" id="qr-close-x">×</button>
     </div>
     <div class="modal-body">
-      <div style="display:flex; gap:10px; margin-bottom: 12px;">
+      <div class="qr-actions">
         <button class="btn btn-download" id="qr-admin-btn">🛠 Панель администратора</button>
         <button class="btn btn-download" id="qr-doctor-btn">💊 Планшет врача</button>
       </div>
-      <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom:8px;">
-        Убедитесь, что адрес содержит IP компьютера в сети, а не «localhost».
-      </div>
-      <input id="qr-url-input" type="text" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);" readonly>
-      <div id="qr-container" style="margin-top:15px; display:flex; justify-content:center;"></div>
+      <div class="qr-hint">Убедитесь, что адрес содержит IP компьютера в сети, а не «localhost».</div>
+      <input id="qr-url-input" type="text" class="qr-url" readonly>
+      <div id="qr-container" class="qr-container"></div>
     </div>
   </div>
 </div>
 
 <!-- Модальное окно обновлений -->
-<div id="updates-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-updates">&times;</span>
-        <h2>🔄 Обновление системы</h2>
-        <div id="updates-status" style="margin: 20px 0; font-size: 1.1em;"></div>
-        <div class="modal-actions" style="display: flex; gap: 10px; justify-content: space-between; align-items: center;">
-            <div style="display:flex; gap:8px; align-items:center;">
-                <label for="keep-releases" style="color: var(--text-muted); font-size: 0.9rem;">Оставить релизов:</label>
-                <input id="keep-releases" type="number" min="1" value="5" style="width:70px; padding:6px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);">
-                <button id="cleanup-btn" class="btn btn-download" title="Удалить старые релизы">🧹 Очистить</button>
-            </div>
-            <div style="display:flex; gap:8px;">
-                <button id="rollback-btn" class="btn btn-cancel" title="Откатить на предыдущую версию">↩️ Откат</button>
-                <button id="update-confirm-btn" class="btn btn-add" style="display: none;">⬇️ Скачать и обновить</button>
-                <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
-            </div>
-        </div>
+<div id="updates-modal" class="modal" style="display:none;">
+  <div class="modal-content" id="updates-modal-content">
+    <div class="modal-header">
+      <h2>🔄 Обновление системы</h2>
+      <button class="modal-close" id="updates-close-x">×</button>
     </div>
+    <div class="modal-body">
+      <div id="updates-status" class="updates-status"></div>
+    </div>
+    <div class="modal-actions">
+      <div>
+        <label for="keep-releases" style="color: var(--text-muted); font-size: 0.9rem;">Оставить релизов:</label>
+        <input id="keep-releases" type="number" min="1" value="5" style="width:70px; padding:6px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);">
+        <button id="cleanup-btn" class="btn btn-download" title="Удалить старые релизы">🧹 Очистить</button>
+      </div>
+      <div>
+        <button id="rollback-btn" class="btn btn-cancel" title="Откатить на предыдущую версию">↩️ Откат</button>
+        <button id="update-confirm-btn" class="btn btn-add" style="display:none;">⬇️ Скачать и обновить</button>
+        <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="js/admin-app.js"></script>

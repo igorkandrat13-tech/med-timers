@@ -4,7 +4,7 @@ export function initUpdates() {
     const checkBtn = document.getElementById('check-updates-btn');
     const modal = document.getElementById('updates-modal');
     const closeBtn = document.getElementById('update-close-btn');
-    const closeX = document.querySelector('.close-updates');
+    const closeX = document.getElementById('updates-close-x');
     const confirmBtn = document.getElementById('update-confirm-btn');
     const statusDiv = document.getElementById('updates-status');
     const versionEl = document.getElementById('build-version');

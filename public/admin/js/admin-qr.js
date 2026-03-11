@@ -86,6 +86,7 @@ function initQRUI() {
   const adminBtn = document.getElementById('qr-admin-btn');
   const doctorBtn = document.getElementById('qr-doctor-btn');
   const modal = document.getElementById('qr-modal');
+  const closeX = document.getElementById('qr-close-x');
 
   if (showBtn && !showBtn._qrBound) {
     showBtn._qrBound = true;
@@ -103,6 +104,13 @@ function initQRUI() {
     modal._qrBound = true;
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.style.display = 'none';
+    });
+  }
+  if (closeX && !closeX._qrBound) {
+    closeX._qrBound = true;
+    closeX.addEventListener('click', () => {
+      const m = document.getElementById('qr-modal');
+      if (m) m.style.display = 'none';
     });
   }
 }
