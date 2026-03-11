@@ -182,6 +182,18 @@ body {
     transition: background 0.3s ease, color 0.3s ease;
 }
 
+body {
+    --doctor-header-height: 70px;
+    --doctor-procedure-height: 56px;
+    --doctor-sticky-offset: 126px;
+    --doctor-events-width: 300px;
+    --doctor-events-collapsed-width: 56px;
+}
+
+body.events-collapsed {
+    --doctor-events-width: var(--doctor-events-collapsed-width);
+}
+
 /* ==================== HEADER ==================== */
 header {
     background: var(--header-gradient);
@@ -195,8 +207,6 @@ header {
     top: 0;
     z-index: 100;
     transition: background 0.3s ease;
-    /* Убираем относительное позиционирование, чтобы не ломать поток */
-    position: relative; 
 }
 
 header h1 {
@@ -299,8 +309,7 @@ header h1 {
     overflow-y: auto;
     background-color: var(--bg-body);
     transition: background 0.3s ease;
-    /* Отступ справа для правой панели */
-    margin-right: 300px; 
+    margin-right: var(--doctor-events-width);
     padding-right: 16px;
 }
 
@@ -583,9 +592,9 @@ header h1 {
 .sidebar-right {
     position: fixed;
     right: 0;
-    top: 60px; 
-    width: 300px;
-    height: calc(100vh - 60px);
+    top: var(--doctor-sticky-offset);
+    width: var(--doctor-events-width);
+    height: calc(100vh - var(--doctor-sticky-offset));
     background: var(--bg-panel);
     border-left: 1px solid var(--border-color);
     overflow-y: auto;
@@ -596,12 +605,23 @@ header h1 {
     transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.sidebar-right h3 {
-    margin-top: 0;
-    color: var(--text-main);
-    font-size: 1.1rem;
+.events-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.events-title {
+    color: var(--text-main);
+    font-size: 1.05rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.events-actions {
+    display: flex;
+    gap: 8px;
     align-items: center;
 }
 
@@ -624,6 +644,26 @@ header h1 {
     max-height: calc(100% - 40px);
     overflow-y: auto;
     margin-top: 10px;
+}
+
+body.events-collapsed .sidebar-right {
+    padding: 10px 8px;
+}
+
+body.events-collapsed .events-title {
+    display: none;
+}
+
+body.events-collapsed .events-list {
+    display: none;
+}
+
+body.events-collapsed .sidebar-right .btn-clear:not(#events-toggle) {
+    display: none;
+}
+
+#events-toggle {
+    min-width: 44px;
 }
 
 .events-list .event-item {
@@ -893,6 +933,37 @@ header h1 {
         left: 10px;
         max-width: none;
     }
+}
+
+.procedure-selector {
+    position: sticky;
+    top: var(--doctor-header-height);
+    z-index: 95;
+}
+
+.procedure-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#procedure-search {
+    width: 220px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.active-count {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background-color: rgba(255, 255, 255, 0.15);
+    white-space: nowrap;
 }
 
 /* Очень маленькие экраны (до 480px) */

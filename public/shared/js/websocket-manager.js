@@ -9,9 +9,16 @@ export class WebSocketManager {
         this.onMessageHandlers = new Set();
         this.onConnectHandlers = new Set();
         this.onDisconnectHandlers = new Set();
+        this.reconnectAttempt = 0;
+        this.reconnectTimer = null;
+        this.lastDisconnectAt = 0;
     }
 
     connect() {
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let url = `${protocol}//${window.location.host}?role=${this.role}`;
         if (this.bedId) url += `&bed=${this.bedId}`;
@@ -27,13 +34,22 @@ export class WebSocketManager {
 
         this.ws.onopen = () => {
             console.log(`✅ WebSocket подключен (${this.role})`);
-            this.onConnectHandlers.forEach(handler => handler());
+            this.reconnectAttempt = 0;
+            this.onConnectHandlers.forEach(handler => handler({ attempt: 0 }));
         };
 
         this.ws.onclose = () => {
             console.log('❌ WebSocket отключен. Переподключение...');
-            this.onDisconnectHandlers.forEach(handler => handler());
-            setTimeout(() => this.connect(), 3000);
+            this.lastDisconnectAt = Date.now();
+            const attempt = this.reconnectAttempt;
+            const base = 1000;
+            const max = 30000;
+            const delay = Math.min(max, base * Math.pow(2, attempt));
+            const jitter = Math.floor(Math.random() * 250);
+            const delayMs = delay + jitter;
+            this.onDisconnectHandlers.forEach(handler => handler({ attempt, delayMs }));
+            this.reconnectAttempt = Math.min(attempt + 1, 10);
+            this.reconnectTimer = setTimeout(() => this.connect(), delayMs);
         };
 
         this.ws.onmessage = (event) => {
@@ -88,6 +104,10 @@ export class WebSocketManager {
 
     getBedsState() {
         return this.bedsState;
+    }
+
+    isConnected() {
+        return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
     }
 
     async sendControl(bedId, action, params = {}) {

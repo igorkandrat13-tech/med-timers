@@ -28,10 +28,13 @@
     <div class="header-actions">
         <span id="connection-status">Подключение...</span>
         <span id="current-user" style="opacity:0.9;"></span>
+        <span id="active-count" class="active-count"></span>
     </div>
 
     <!-- Правая группа: Звук и Тема (Обязательно в этом контейнере!) -->
     <div class="header-controls-right">
+        <button id="scroll-top" class="btn-theme-toggle" title="К началу списка">⬆️</button>
+        <button id="scroll-bottom" class="btn-theme-toggle" title="К концу списка">⬇️</button>
         <!-- Кнопка звука -->
         <button id="sound-toggle-doctor" class="btn-theme-toggle" title="Вкл/Выкл звук">🔊</button>
         <!-- Кнопка темы -->
@@ -40,12 +43,14 @@
     </div>
 </header>
 
-    <div class="procedure-selector">
-    <label for="global-procedure-select">Выберите процедуру:</label>
+<div class="procedure-selector">
+  <div class="procedure-controls">
+    <label for="global-procedure-select">Процедура:</label>
     <select id="global-procedure-select">
-        <option value="">-- Выберите процедуру --</option>
-        <!-- Опции будут добавлены через JS -->
+      <option value="">-- Выберите процедуру --</option>
     </select>
+    <input id="procedure-search" type="text" placeholder="Поиск..." autocomplete="off">
+  </div>
 </div>
 
 <main class="main">
@@ -90,8 +95,11 @@
 <!-- 🆕 Правая панель — Журнал событий -->
 <aside class="sidebar-right">
     <div class="events-header">
-        <h3>📋 Журнал событий</h3>
-        <button class="btn-clear" onclick="window.clearEventsLog()">🗑️ Очистить</button>
+        <div class="events-title">📋 Журнал событий</div>
+        <div class="events-actions">
+          <button class="btn-clear" id="events-toggle"></button>
+          <button class="btn-clear" onclick="window.clearEventsLog()">🗑️ Очистить</button>
+        </div>
     </div>
     <div id="events-list" class="events-list"></div>
 </aside>
@@ -108,6 +116,7 @@
 <script type="module" src="js/doctor-procedures.js"></script>
 <script type="module" src="js/doctor-timers.js"></script>
 <script type="module" src="js/doctor-theme.js"></script>
+<script type="module" src="js/doctor-ui.js"></script>
 <script type="module" src="/shared/js/current-user.js"></script>
 <script type="module" src="/shared/js/logout.js"></script>
 </body>
