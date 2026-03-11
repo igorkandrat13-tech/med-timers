@@ -404,6 +404,12 @@ tr:last-child td {
 #updates-modal .modal-content {
   width: min(900px, 95vw);
   max-width: 900px;
+  display: flex;
+  flex-direction: column;
+}
+
+#updates-modal .modal-body {
+  flex: 1 1 auto;
 }
 
 #updates-modal .modal-actions {
@@ -412,6 +418,8 @@ tr:last-child td {
   gap: 10px;
   justify-content: space-between;
   align-items: center;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border-color);
 }
 
 #updates-modal .modal-actions > div {
@@ -419,6 +427,28 @@ tr:last-child td {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+#updates-modal .modal-actions .btn {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#updates-modal #keep-releases {
+  height: 40px;
+  width: 80px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+#updates-modal .modal-actions label {
+  margin: 0;
+  line-height: 1.1;
 }
 
 #updates-modal .updates-actions-right {
