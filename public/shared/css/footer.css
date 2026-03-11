@@ -1,0 +1,36 @@
+:root {
+  --footer-text: rgba(255, 255, 255, 0.78);
+  --footer-border: rgba(255, 255, 255, 0.12);
+  --footer-brand: rgba(255, 255, 255, 0.95);
+}
+
+.app-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--footer-border);
+  color: var(--footer-text);
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
+
+.app-footer-text {
+  opacity: 0.95;
+}
+
+.app-footer-brand {
+  font-weight: 800;
+  color: var(--footer-brand);
+}
+
+[data-theme="dark"] .app-footer {
+  border-top-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+@media (max-width: 768px) {
+  .app-footer {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+}
+
