@@ -399,6 +399,42 @@ tr:last-child td {
   color: var(--text-main) !important;
 }
 
+/* ==================== UPDATES MODAL LAYOUT ==================== */
+#updates-modal .modal-content {
+  width: min(900px, 95vw);
+  max-width: 900px;
+}
+
+#updates-modal .modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#updates-modal .modal-actions > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  #updates-modal .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  #updates-modal .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  #updates-modal label {
+    width: 100%;
+  }
+}
+
 /* ==================== STAGES ==================== */
 .stage-item {
   background: var(--bg-table-head); /* Используем фон заголовка таблицы для контраста */
