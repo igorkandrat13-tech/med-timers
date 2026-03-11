@@ -99,16 +99,28 @@ body {
   width: 100%;
   padding: 12px 12px;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-input);
-  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(17, 24, 39, 0.38);
+  color: #f3f4f6;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.auth-input::placeholder {
+  color: rgba(243, 244, 246, 0.7);
 }
 
 .auth-input:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f3f4f6;
+  box-shadow: 0 0 0px 1000px rgba(17, 24, 39, 0.55) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .auth-password {
@@ -163,4 +175,3 @@ body {
     background: rgba(17, 24, 39, 0.04);
   }
 }
-
