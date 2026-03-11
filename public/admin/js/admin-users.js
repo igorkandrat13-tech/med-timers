@@ -1,11 +1,13 @@
 import { apiRequest, showNotification } from './admin-utils.js';
 
 let listenersInitialized = false;
+let usersCache = [];
 
 export async function loadUsers() {
     try {
         const data = await apiRequest('/api/users');
-        renderUsersTable(data.users || []);
+        usersCache = data.users || [];
+        renderUsersTable(usersCache);
         initListeners();
     } catch (e) {
         showNotification(e.message || 'Ошибка загрузки пользователей', 'error');
@@ -17,32 +19,57 @@ function initListeners() {
     listenersInitialized = true;
 
     const addBtn = document.getElementById('add-user-btn');
+    const cancelBtn = document.getElementById('cancel-edit-user-btn');
     if (addBtn) {
         addBtn.addEventListener('click', async () => {
             const fioEl = document.getElementById('add-user-fio');
             const pinEl = document.getElementById('add-user-pin');
+            const editIdEl = document.getElementById('edit-user-id');
+            const isEdit = !!(editIdEl && String(editIdEl.value || '').trim());
             const fio = fioEl ? fioEl.value.trim() : '';
             const pin = pinEl ? pinEl.value.trim() : '';
             if (!fio) {
                 showNotification('Введите ФИО', 'error');
                 return;
             }
-            if (!/^\d{4,10}$/.test(pin)) {
-                showNotification('ПИН должен быть 4-10 цифр', 'error');
-                return;
-            }
             try {
-                await apiRequest('/api/users', {
-                    method: 'POST',
-                    body: JSON.stringify({ fio, pin })
-                });
-                if (fioEl) fioEl.value = '';
-                if (pinEl) pinEl.value = '';
-                showNotification('Пользователь добавлен', 'success');
+                if (isEdit) {
+                    if (pin && !/^\d{4,10}$/.test(pin)) {
+                        showNotification('ПИН должен быть 4-10 цифр', 'error');
+                        return;
+                    }
+                    const id = parseInt(editIdEl.value, 10);
+                    const body = { fio };
+                    if (pin) body.pin = pin;
+                    await apiRequest(`/api/users/${id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(body)
+                    });
+                    showNotification('Пользователь обновлён', 'success');
+                    setEditMode(null);
+                } else {
+                    if (!/^\d{4,10}$/.test(pin)) {
+                        showNotification('ПИН должен быть 4-10 цифр', 'error');
+                        return;
+                    }
+                    await apiRequest('/api/users', {
+                        method: 'POST',
+                        body: JSON.stringify({ fio, pin })
+                    });
+                    showNotification('Пользователь добавлен', 'success');
+                    if (fioEl) fioEl.value = '';
+                    if (pinEl) pinEl.value = '';
+                }
                 loadUsers();
             } catch (e) {
                 showNotification(e.message || 'Ошибка добавления', 'error');
             }
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            setEditMode(null);
         });
     }
 }
@@ -78,29 +105,53 @@ function escapeHtml(str) {
 
 window.loadUsers = loadUsers;
 
-window.editUser = async (id) => {
-    try {
-        const data = await apiRequest('/api/users');
-        const user = (data.users || []).find(x => x.id === id);
-        if (!user) return;
+function setEditMode(user) {
+    const fioEl = document.getElementById('add-user-fio');
+    const pinEl = document.getElementById('add-user-pin');
+    const editIdEl = document.getElementById('edit-user-id');
+    const addBtn = document.getElementById('add-user-btn');
+    const cancelBtn = document.getElementById('cancel-edit-user-btn');
+    const fioLabel = document.getElementById('user-fio-label');
+    const pinLabel = document.getElementById('user-pin-label');
 
-        const fio = prompt('ФИО', user.fio || '');
-        if (fio === null) return;
-        const pin = prompt('Новый ПИН (оставьте пустым, чтобы не менять)', '');
-        if (pin === null) return;
+    if (!fioEl || !pinEl || !editIdEl || !addBtn || !cancelBtn || !fioLabel || !pinLabel) return;
 
-        const body = { fio: fio.trim() };
-        if (pin.trim()) body.pin = pin.trim();
-
-        await apiRequest(`/api/users/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(body)
-        });
-        showNotification('Пользователь обновлён', 'success');
-        loadUsers();
-    } catch (e) {
-        showNotification(e.message || 'Ошибка обновления', 'error');
+    if (!user) {
+        editIdEl.value = '';
+        fioEl.value = '';
+        pinEl.value = '';
+        pinEl.placeholder = '4-10 цифр';
+        fioLabel.textContent = 'ФИО *';
+        pinLabel.textContent = 'ПИН-код *';
+        addBtn.textContent = '➕ Добавить';
+        cancelBtn.style.display = 'none';
+        return;
     }
+
+    editIdEl.value = String(user.id);
+    fioEl.value = user.fio || '';
+    pinEl.value = '';
+    pinEl.placeholder = 'Оставьте пустым, чтобы не менять';
+    fioLabel.textContent = `ФИО (ID ${user.id}) *`;
+    pinLabel.textContent = 'Новый ПИН (необязательно)';
+    addBtn.textContent = '💾 Сохранить';
+    cancelBtn.style.display = 'inline-block';
+}
+
+window.editUser = async (id) => {
+    let user = usersCache.find(u => u.id === id);
+    if (!user) {
+        try {
+            const data = await apiRequest('/api/users');
+            usersCache = data.users || [];
+            user = usersCache.find(u => u.id === id);
+        } catch (e) {
+            showNotification(e.message || 'Ошибка загрузки пользователей', 'error');
+            return;
+        }
+    }
+    if (!user) return;
+    setEditMode(user);
 };
 
 window.toggleUser = async (id, active) => {
@@ -110,9 +161,12 @@ window.toggleUser = async (id, active) => {
             body: JSON.stringify({ active: !!active })
         });
         showNotification(active ? 'Пользователь активирован' : 'Пользователь деактивирован', 'success');
+        const editIdEl = document.getElementById('edit-user-id');
+        if (editIdEl && parseInt(editIdEl.value || '', 10) === id && !active) {
+            setEditMode(null);
+        }
         loadUsers();
     } catch (e) {
         showNotification(e.message || 'Ошибка изменения статуса', 'error');
     }
 };
-

@@ -19,6 +19,8 @@
   <button class="btn btn-download" id="check-updates-btn" title="Проверить и установить обновления">🔁 Проверить обновления</button>
   <span id="build-version" style="margin-left:8px; color: var(--text-muted); font-size: 0.9rem;"></span>
   <button id="theme-toggle-admin" class="btn-theme-toggle" title="Переключить тему">🌙</button>
+  <span id="current-user" style="margin-left:10px; color: var(--text-muted); font-size: 0.95rem;"></span>
+  <button id="logout-btn-admin" class="btn btn-cancel" title="Выйти">🚪 Выйти</button>
 </div>
   </header>
 
@@ -79,14 +81,16 @@
     <div class="modal-body">
       <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom: 12px;">
         <div class="form-group" style="margin:0; min-width: 240px;">
-          <label>ФИО *</label>
+          <label id="user-fio-label">ФИО *</label>
           <input type="text" id="add-user-fio" placeholder="Иванов Иван Иванович">
         </div>
         <div class="form-group" style="margin:0; width: 180px;">
-          <label>ПИН-код *</label>
+          <label id="user-pin-label">ПИН-код *</label>
           <input type="password" id="add-user-pin" placeholder="4-10 цифр" inputmode="numeric">
         </div>
+        <input type="hidden" id="edit-user-id" value="">
         <button class="btn btn-add" id="add-user-btn">➕ Добавить</button>
+        <button class="btn btn-cancel" id="cancel-edit-user-btn" style="display:none;">Отмена</button>
       </div>
       <table>
         <thead>
@@ -257,6 +261,8 @@
 <script type="module" src="js/admin-app.js"></script>
 <script type="module" src="js/admin-updates.js"></script>
 <script type="module" src="js/admin-theme.js"></script>
+<script type="module" src="/shared/js/current-user.js"></script>
+<script type="module" src="/shared/js/logout.js"></script>
 <script src="/shared/js/qrcode.min.js"></script>
 <script type="module" src="js/admin-qr.js"></script>
 </body>

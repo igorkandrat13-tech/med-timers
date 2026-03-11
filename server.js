@@ -161,7 +161,7 @@ app.get('/api/auth/me', (req, res) => {
     const cookies = parseCookies(req);
     const payload = verifyToken(cookies.mtoken);
     if (!payload) return res.json({ role: null });
-    res.json({ role: payload.role, userId: payload.userId || null, fio: payload.fio || null });
+    res.json({ role: payload.role, sub: payload.sub || null, userId: payload.userId || null, fio: payload.fio || null });
 });
 
 app.get('/api/users/public', (req, res) => {
