@@ -287,15 +287,24 @@
     </div>
     <div class="modal-body">
       <div id="updates-status" class="updates-status"></div>
+      <div id="releases-panel" class="releases-panel hidden">
+        <div class="releases-toolbar">
+          <div class="releases-toolbar-left">
+            <label for="keep-releases">Оставить релизов:</label>
+            <input id="keep-releases" type="number" min="1" value="5">
+            <button id="cleanup-btn" class="btn btn-download" title="Удалить старые релизы">🧹 Очистить</button>
+          </div>
+          <div class="releases-toolbar-right">
+            <button id="rollback-btn" class="btn btn-cancel" title="Откатить на предыдущую версию">↩️ Откат на предыдущий</button>
+          </div>
+        </div>
+        <div class="releases-hint">Выберите релиз для отката:</div>
+        <div id="releases-list" class="releases-list"></div>
+      </div>
     </div>
     <div class="modal-actions">
-      <div class="updates-actions-left">
-        <label for="keep-releases" style="color: var(--text-muted); font-size: 0.9rem;">Оставить релизов:</label>
-        <input id="keep-releases" type="number" min="1" value="5" style="width:70px; padding:6px; border:1px solid var(--border-color); border-radius:6px; background: var(--bg-input); color: var(--text-main);">
-        <button id="cleanup-btn" class="btn btn-download" title="Удалить старые релизы">🧹 Очистить</button>
-      </div>
       <div class="updates-actions-right">
-        <button id="rollback-btn" class="btn btn-cancel" title="Откатить на предыдущую версию">↩️ Откат</button>
+        <button id="view-releases-btn" class="btn btn-download">📜 Просмотр релизов</button>
         <button id="update-confirm-btn" class="btn btn-add" style="display:none;">⬇️ Скачать и обновить</button>
         <button id="update-close-btn" class="btn btn-cancel">Закрыть</button>
       </div>
@@ -310,7 +319,6 @@
 <script type="module" src="js/admin-updates.js"></script>
 <script type="module" src="js/admin-theme.js"></script>
 <script type="module" src="/shared/js/current-user.js"></script>
-<script type="module" src="/shared/js/logout.js"></script>
 <script type="module" src="/shared/js/logout.js"></script>
 <script src="/shared/js/qrcode.min.js"></script>
 <script type="module" src="js/admin-qr.js"></script>

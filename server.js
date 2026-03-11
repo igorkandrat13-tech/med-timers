@@ -246,7 +246,7 @@ app.get('/admin', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.redirect('/doctor/doctor.html');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Служебная информация о сервере (для QR)
@@ -272,7 +272,7 @@ app.get('/api/server-info', (req, res) => {
 
 // Версия сборки из git
 app.get('/api/version', (req, res) => {
-    exec('git rev-parse --short HEAD', (err, stdout) => {
+    exec('git rev-parse --short HEAD', { cwd: __dirname }, (err, stdout) => {
         if (err) {
             return res.json({ version: null });
         }
@@ -282,19 +282,23 @@ app.get('/api/version', (req, res) => {
 
 // ==================== GIT ОБНОВЛЕНИЯ ====================
 
+function execInRepo(command, cb) {
+    exec(command, { cwd: __dirname }, cb);
+}
+
 // Проверка обновлений (fetch и статус)
-app.get('/api/updates/check', (req, res) => {
-    exec('git fetch', (err) => {
+app.get('/api/updates/check', ensureApiRole('admin'), (req, res) => {
+    execInRepo('git fetch', (err) => {
         if (err) {
             console.error('Git fetch error:', err);
             return res.json({ available: false, error: 'Git fetch failed' });
         }
         
         // Проверяем, сколько коммитов позади
-        exec('git rev-list HEAD...origin/main --count', (err, stdout) => {
+        execInRepo('git rev-list HEAD...origin/main --count', (err, stdout) => {
             if (err) {
                 // Если origin/main нет, пробуем origin/master
-                 exec('git rev-list HEAD...origin/master --count', (err2, stdout2) => {
+                 execInRepo('git rev-list HEAD...origin/master --count', (err2, stdout2) => {
                      if (err2) {
                          console.error('Git rev-list error:', err2);
                          return res.json({ available: false, error: 'Git check failed' });
@@ -311,8 +315,8 @@ app.get('/api/updates/check', (req, res) => {
 });
 
 // Установка обновлений (pull)
-app.post('/api/updates/pull', (req, res) => {
-    exec('git pull', (err, stdout, stderr) => {
+app.post('/api/updates/pull', ensureApiRole('admin'), (req, res) => {
+    execInRepo('git pull', (err, stdout, stderr) => {
         if (err) {
             console.error('Git pull error:', err);
             return res.status(500).json({ error: 'Update failed', details: stderr });
@@ -331,8 +335,8 @@ app.post('/api/updates/pull', (req, res) => {
 });
 
 // Список последних коммитов (для информации/диагностики)
-app.get('/api/updates/commits', (req, res) => {
-    exec('git log -n 10 --pretty=format:%h|%ct|%s', (err, stdout, stderr) => {
+app.get('/api/updates/commits', ensureApiRole('admin'), (req, res) => {
+    execInRepo('git log -n 10 --pretty=format:%h|%ct|%s', (err, stdout, stderr) => {
         if (err) {
             console.error('Git log error:', err);
             return res.status(500).json({ error: 'List commits failed', details: stderr });
@@ -345,14 +349,64 @@ app.get('/api/updates/commits', (req, res) => {
     });
 });
 
+app.get('/api/updates/releases', ensureApiRole('admin'), (req, res) => {
+    const limitRaw = parseInt(String(req.query.limit || '15'), 10);
+    const limit = Math.max(1, Math.min(50, Number.isFinite(limitRaw) ? limitRaw : 15));
+    execInRepo('git rev-parse HEAD', (eHead, headStdout) => {
+        if (eHead) {
+            return res.status(500).json({ error: 'Releases failed', details: 'Cannot get HEAD' });
+        }
+        const headFull = String(headStdout || '').trim();
+        execInRepo(`git log -n ${limit} --pretty=format:%h|%H|%ct|%s`, (err, stdout, stderr) => {
+            if (err) {
+                return res.status(500).json({ error: 'Releases failed', details: stderr });
+            }
+            const lines = String(stdout || '').split('\n').filter(Boolean);
+            const releases = lines.map(line => {
+                const [shortHash, fullHash, ts, ...rest] = line.split('|');
+                const message = rest.join('|');
+                const time = parseInt(ts, 10);
+                return {
+                    hash: String(fullHash || '').trim(),
+                    short: String(shortHash || '').trim(),
+                    time: Number.isFinite(time) ? time : null,
+                    subject: String(message || '').trim(),
+                    current: String(fullHash || '').trim() === headFull
+                };
+            });
+            res.json({ releases });
+        });
+    });
+});
+
+app.post('/api/updates/rollback-to', ensureApiRole('admin'), (req, res) => {
+    const hash = String(req.body?.hash || '').trim();
+    if (!/^[0-9a-f]{7,40}$/i.test(hash)) {
+        return res.status(400).json({ error: 'Rollback failed', details: 'Invalid hash' });
+    }
+    execInRepo(`git rev-parse --verify ${hash}^{commit}`, (e1, out1, err1) => {
+        if (e1) {
+            return res.status(400).json({ error: 'Rollback failed', details: 'Commit not found' });
+        }
+        const resolved = String(out1 || '').trim();
+        execInRepo(`git reset --hard ${resolved}`, (e2, out2, err2) => {
+            if (e2) {
+                return res.status(500).json({ error: 'Rollback failed', details: err2 });
+            }
+            res.json({ success: true, message: `Rolled back to ${hash}. Restarting server...` });
+            setTimeout(() => process.exit(1), 1000);
+        });
+    });
+});
+
 // Откат на предыдущий коммит (legacy layout)
-app.post('/api/updates/rollback', (req, res) => {
-    exec('git rev-parse --short HEAD~1', (e1, prevHash) => {
+app.post('/api/updates/rollback', ensureApiRole('admin'), (req, res) => {
+    execInRepo('git rev-parse --short HEAD~1', (e1, prevHash) => {
         if (e1) {
             console.error('Git rev-parse error:', e1);
             return res.status(400).json({ error: 'Rollback failed', details: 'Previous commit not found' });
         }
-        exec('git reset --hard HEAD~1', (e2, out2, err2) => {
+        execInRepo('git reset --hard HEAD~1', (e2, out2, err2) => {
             if (e2) {
                 console.error('Git reset error:', e2);
                 return res.status(500).json({ error: 'Rollback failed', details: err2 });
@@ -365,9 +419,9 @@ app.post('/api/updates/rollback', (req, res) => {
 });
 
 // Очистка "старых релизов" (в legacy-режиме не используется)
-app.post('/api/updates/cleanup', (req, res) => {
+app.post('/api/updates/cleanup', ensureApiRole('admin'), (req, res) => {
     // Для working-copy из git нет каталогов releases; делаем лёгкую очистку объектов
-    exec('git gc --prune=now', (err, stdout, stderr) => {
+    execInRepo('git gc --prune=now', (err, stdout, stderr) => {
         if (err) {
             console.error('Git gc error:', err);
             return res.status(500).json({ error: 'Cleanup failed', details: stderr });
