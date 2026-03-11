@@ -77,28 +77,18 @@ async function openQRModal(target) {
   modal.style.display = 'flex';
   const serverInfo = await getServerCandidates();
   const base = pickBaseUrl(serverInfo);
-  const url = target === 'admin' ? `${base}/admin` : `${base}/doctor`;
+  const url = `${base}/`;
   makeQR(url);
 }
 
 function initQRUI() {
   const showBtn = document.getElementById('show-qr-btn');
-  const adminBtn = document.getElementById('qr-admin-btn');
-  const doctorBtn = document.getElementById('qr-doctor-btn');
   const modal = document.getElementById('qr-modal');
   const closeX = document.getElementById('qr-close-x');
 
   if (showBtn && !showBtn._qrBound) {
     showBtn._qrBound = true;
-    showBtn.addEventListener('click', () => openQRModal('doctor'));
-  }
-  if (adminBtn && !adminBtn._qrBound) {
-    adminBtn._qrBound = true;
-    adminBtn.addEventListener('click', () => openQRModal('admin'));
-  }
-  if (doctorBtn && !doctorBtn._qrBound) {
-    doctorBtn._qrBound = true;
-    doctorBtn.addEventListener('click', () => openQRModal('doctor'));
+    showBtn.addEventListener('click', () => openQRModal('root'));
   }
   if (modal && !modal._qrBound) {
     modal._qrBound = true;

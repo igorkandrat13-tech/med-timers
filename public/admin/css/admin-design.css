@@ -477,13 +477,6 @@ tr:last-child td {
 }
 
 /* ==================== QR MODAL LAYOUT ==================== */
-#qr-modal .qr-actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
 #qr-modal .qr-hint {
   font-size: 0.9rem;
   color: var(--text-muted);
