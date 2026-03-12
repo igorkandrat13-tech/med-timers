@@ -204,6 +204,21 @@ body {
   justify-content: stretch;
 }
 
+.auth-actions-row {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+}
+
+.auth-back {
+  width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
 .auth-submit {
   width: 100%;
   border-radius: 10px;
