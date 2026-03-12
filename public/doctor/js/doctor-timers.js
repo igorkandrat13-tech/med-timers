@@ -160,8 +160,10 @@ export function renderBedsGrid() {
         const buttonsHTML = getButtonsHTML(bed, bedId);
 
         card.innerHTML = `
-            <div class="bed-number">Койка ${bedId}</div>
-            <div class="bed-status">${statusText}</div>
+            <div class="bed-ring" style="--p:${progressPercent};">
+              <div class="bed-number">Койка ${bedId}</div>
+            </div>
+            <div class="bed-status"><span class="status-chip ${bed.status}">${statusText}</span></div>
             ${progressBar}
             ${bed.status !== 'idle' ? `
                 <div class="bed-procedure" title="${procedureText}">
