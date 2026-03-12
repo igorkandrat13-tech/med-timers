@@ -1,6 +1,6 @@
 import { getBedsState, sendControlCommand } from './doctor-websocket.js';
 import { getProcedureById } from './doctor-procedures.js';
-import { formatTime, getStatusText, getStatusClass, getProgress, getProgressBarHTML } from './doctor-utils.js';
+import { formatTime, getStatusText, getStatusClass, getProgress } from './doctor-utils.js';
 
 let selectedBedId = null;
 let selectedProcedureId = null; // ✅ НОВОЕ: ID выбранной процедуры
@@ -154,7 +154,6 @@ export function renderBedsGrid() {
         const timerText = formatTime(bed);
         const procedureText = getProcedureDisplay(bed); // ✅ Используем новую функцию
         const progressPercent = getProgress(bed);
-        const progressBar = getProgressBarHTML(progressPercent, bed.status);
 
         // Динамические кнопки в зависимости от статуса
         const buttonsHTML = getButtonsHTML(bed, bedId);
@@ -164,7 +163,6 @@ export function renderBedsGrid() {
               <div class="bed-number">Койка ${bedId}</div>
             </div>
             <div class="bed-status"><span class="status-chip ${bed.status}">${statusText}</span></div>
-            ${progressBar}
             ${bed.status !== 'idle' ? `
                 <div class="bed-procedure" title="${procedureText}">
                     <span class="procedure-icon">💊</span>
@@ -272,17 +270,6 @@ export function updateSidebar() {
     if (timerEl) timerEl.textContent = formatTime(bed);
     if (procedureNameEl) procedureNameEl.textContent = getProcedureDisplay(bed);
     
-    // Обновляем прогресс-бар в сайдбаре, если он там есть
-    let sidebarProgress = document.getElementById('sidebar-progress-container');
-    if (!sidebarProgress) {
-        sidebarProgress = document.createElement('div');
-        sidebarProgress.id = 'sidebar-progress-container';
-        sidebarProgress.style.marginTop = '10px';
-        timerEl.parentElement.after(sidebarProgress);
-    }
-    const progressPercent = getProgress(bed);
-    sidebarProgress.innerHTML = getProgressBarHTML(progressPercent, bed.status);
-    
     // ✅ УБРАНО: больше не отключаем выпадающий список в боковой панели
     // const procedureSelect = document.getElementById('procedure-select');
     // if (procedureSelect) {
@@ -301,17 +288,11 @@ export function updateTimersUI() {
             el.textContent = formatTime(bed);
         }
         
-        // Обновляем прогресс-бар в карточке
         const card = el?.closest('.bed-card');
-        const progressContainer = card?.querySelector('.progress-container');
-        if (progressContainer) {
-            const percent = getProgress(bed);
-            const progressBar = progressContainer.querySelector('.progress-bar');
-            if (progressBar) {
-                progressBar.style.width = `${percent}%`;
-                // Обновляем класс статуса если он изменился
-                progressBar.className = `progress-bar ${bed.status}`;
-            }
+        const percent = getProgress(bed);
+        const ring = card?.querySelector('.bed-ring');
+        if (ring) {
+            ring.style.setProperty('--p', String(percent));
         }
     });
     
@@ -320,17 +301,6 @@ export function updateTimersUI() {
         const timerEl = document.getElementById('sidebar-timer');
         if (timerEl) {
             timerEl.textContent = formatTime(bed);
-        }
-        
-        // Обновляем прогресс-бар в сайдбаре
-        const sidebarProgress = document.getElementById('sidebar-progress-container');
-        if (sidebarProgress) {
-            const percent = getProgress(bed);
-            const progressBar = sidebarProgress.querySelector('.progress-bar');
-            if (progressBar) {
-                progressBar.style.width = `${percent}%`;
-                progressBar.className = `progress-bar ${bed.status}`;
-            }
         }
     }
 }
