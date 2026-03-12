@@ -129,6 +129,51 @@ body {
   align-items: center;
 }
 
+.pinpad {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.pinpad-display {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(17, 24, 39, 0.38);
+  color: #f3f4f6;
+  font-size: 1.2rem;
+  letter-spacing: 8px;
+  text-align: center;
+  user-select: none;
+}
+
+.pinpad-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.pinpad-btn {
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f3f4f6;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pinpad-btn:active {
+  transform: translateY(1px);
+}
+
+.pinpad-btn-secondary {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
 .auth-password .auth-input {
   padding-right: 44px;
 }
