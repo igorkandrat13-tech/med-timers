@@ -385,10 +385,27 @@ header h1 {
 }
 
 .bed-number {
-    font-size: 1.05rem;
-    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     color: var(--text-main);
     margin: 0;
+}
+
+.bed-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    line-height: 1.1;
+}
+
+.bed-id {
+    font-size: 1.6rem;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: 0.3px;
 }
 
 .bed-status {

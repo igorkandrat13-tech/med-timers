@@ -160,7 +160,10 @@ export function renderBedsGrid() {
 
         card.innerHTML = `
             <div class="bed-ring" style="--p:${progressPercent};">
-              <div class="bed-number">Койка ${bedId}</div>
+              <div class="bed-number">
+                <span class="bed-label">Койка</span>
+                <span class="bed-id">${bedId}</span>
+              </div>
             </div>
             <div class="bed-status"><span class="status-chip ${bed.status}">${statusText}</span></div>
             ${bed.status !== 'idle' ? `
