@@ -820,6 +820,20 @@ body.events-collapsed #events-toggle {
     }
 }
 
+@media (orientation: landscape) and (max-width: 1200px) {
+    .bed-procedure {
+        align-items: flex-start;
+    }
+    .procedure-name {
+        font-size: 0.9rem;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.25;
+    }
+}
+
 /* ==================== УВЕДОМЛЕНИЕ О ЗАВЕРШЕНИИ ==================== */
 .completion-notification {
     position: fixed;
