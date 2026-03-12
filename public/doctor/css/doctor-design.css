@@ -806,6 +806,20 @@ body.events-collapsed #events-toggle {
 .bed-card.paused .procedure-name { color: var(--warning-text-dark); }
 .bed-card.completed .procedure-name { color: var(--danger-text-dark); }
 
+@media (orientation: portrait) and (max-width: 992px) {
+    .bed-procedure {
+        align-items: flex-start;
+    }
+    .procedure-name {
+        font-size: 0.9rem;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.25;
+    }
+}
+
 /* ==================== УВЕДОМЛЕНИЕ О ЗАВЕРШЕНИИ ==================== */
 .completion-notification {
     position: fixed;
