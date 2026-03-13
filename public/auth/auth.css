@@ -140,7 +140,7 @@ body {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(17, 24, 39, 0.38);
-  color: #f3f4f6;
+  color: rgba(243, 244, 246, 0.86);
   font-size: 1.2rem;
   letter-spacing: 8px;
   text-align: center;
@@ -159,7 +159,7 @@ body {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
-  color: #f3f4f6;
+  color: rgba(243, 244, 246, 0.86);
   font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
