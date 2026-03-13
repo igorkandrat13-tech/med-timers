@@ -85,6 +85,7 @@
     let pinValue = '';
     const PIN_MIN = 4;
     const PIN_MAX = 10;
+    let pinAutoTimer = null;
 
     titleEl.textContent = 'Вход';
     badgeEl.textContent = role === 'doctor' ? 'Врач' : 'Администратор';
@@ -142,6 +143,17 @@
     function setPinValue(next) {
       pinValue = String(next || '').replace(/\D/g, '').slice(0, PIN_MAX);
       renderPinpad();
+      if (role === 'doctor') {
+        errEl.textContent = '';
+        if (pinAutoTimer) clearTimeout(pinAutoTimer);
+        const canAuto = !!userSelectEl.value && pinValue.length >= PIN_MIN && pinValue.length <= PIN_MAX;
+        if (canAuto) {
+          pinAutoTimer = setTimeout(() => {
+            if (btn.disabled) return;
+            doLogin();
+          }, 250);
+        }
+      }
     }
 
     if (role === 'doctor') {
@@ -193,6 +205,9 @@
       errEl.textContent = '';
       btn.disabled = true;
       btn.textContent = 'Входим...';
+      if (pinpadGridEl) {
+        pinpadGridEl.querySelectorAll('button').forEach(b => b.disabled = true);
+      }
       try {
         if (role === 'doctor' && !userSelectEl.value) {
           errEl.textContent = 'Выберите пользователя';
@@ -231,6 +246,9 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Войти';
+        if (pinpadGridEl) {
+          pinpadGridEl.querySelectorAll('button').forEach(b => b.disabled = false);
+        }
       }
     }
 
