@@ -234,4 +234,14 @@ body {
     border: 1px solid rgba(17, 24, 39, 0.10);
     background: rgba(17, 24, 39, 0.04);
   }
+  .pinpad-display {
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    background: rgba(17, 24, 39, 0.06);
+    color: rgba(17, 24, 39, 0.92);
+  }
+  .pinpad-btn {
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    background: rgba(17, 24, 39, 0.06);
+    color: rgba(17, 24, 39, 0.92);
+  }
 }
