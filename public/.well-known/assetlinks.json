@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "by.westa.medt.Doctor",
+      "sha256_cert_fingerprints": [
+        "AB:F5:03:C0:37:85:39:09:5A:0F:66:70:E1:9C:68:1E:DF:4E:85:7F:ED:55:8E:C0:7F:CC:DD:BB:6E:AA:63:67"
+      ]
+    }
+  }
+]
+
+
+

@@ -1,0 +1,25 @@
+{
+  "packageId": "by.westa.medt.Doctor",
+  "host": "med-timers.westa.by",
+  "name": "Мед-Таймеры (Планшет врача)",
+  "launcherName": "МедТаймер",
+  "startUrl": "/doctor/doctor.html",
+  "display": "standalone",
+  "themeColor": "#007bff",
+  "themeColorDark": "#111827",
+  "backgroundColor": "#f4f7f6",
+  "navigationColor": "#111827",
+  "navigationColorDark": "#111827",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "orientation": "landscape",
+  "iconUrl": "https://med-timers.westa.by/favicon.ico.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "keystore.jks",
+    "alias": "twa"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "generatorApp": "bubblewrap-cli"
+}
