@@ -1,5 +1,20 @@
 :root {
   color-scheme: light dark;
+  --bg-main: #111827;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --primary-color: #3b82f6;
+  --danger-color: #ef4444;
+}
+
+:root:not([data-theme="dark"]) {
+  --bg-main: #f5f7fa;
+  --text-main: #111827;
+  --text-muted: #475569;
+  --border-color: rgba(17, 24, 39, 0.12);
+  --primary-color: #2563eb;
+  --danger-color: #ef4444;
 }
 
 body {
