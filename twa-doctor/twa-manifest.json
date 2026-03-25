@@ -12,6 +12,8 @@
   "navigationColorDark": "#111827",
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
+  "enableNotifications": true,
+  "enableSiteSettingsShortcut": true,
   "orientation": "landscape",
   "iconUrl": "https://med-timers.westa.by/favicon.ico.png",
   "splashScreenFadeOutDuration": 300,
