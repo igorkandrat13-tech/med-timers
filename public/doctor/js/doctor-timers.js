@@ -150,9 +150,12 @@ export function renderBedsGrid() {
         card.className = `bed-card ${bed.status} ${selectedBedId === bedId ? 'selected' : ''}`;
         card.onclick = () => selectBed(bedId);
 
-        const statusText = getStatusText(bed);
         const timerText = formatTime(bed);
         const procedureText = getProcedureDisplay(bed); // ✅ Используем новую функцию
+        let statusText = getStatusText(bed);
+        if (bed.status === 'paused' && procedureText && procedureText !== '—') {
+            statusText = `${procedureText} (пауза)`;
+        }
         const progressPercent = getProgress(bed);
 
         // Динамические кнопки в зависимости от статуса
@@ -268,7 +271,14 @@ export function updateSidebar() {
     const timerEl = document.getElementById('sidebar-timer');
     const procedureNameEl = document.getElementById('sidebar-procedure-name');
     
-    if (statusEl) statusEl.textContent = getStatusText(bed);
+    if (statusEl) {
+        const procText = getProcedureDisplay(bed);
+        let statusText = getStatusText(bed);
+        if (bed.status === 'paused' && procText && procText !== '—') {
+            statusText = `${procText} (пауза)`;
+        }
+        statusEl.textContent = statusText;
+    }
     if (durationEl) durationEl.textContent = bed.duration || '-';
     if (timerEl) timerEl.textContent = formatTime(bed);
     if (procedureNameEl) procedureNameEl.textContent = getProcedureDisplay(bed);

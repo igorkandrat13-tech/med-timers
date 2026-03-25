@@ -9,6 +9,7 @@ yarn-error.log*
 timers_log.csv
 procedures.json
 users.json
+admin_auth.json
 
 # IDEs
 .idea/

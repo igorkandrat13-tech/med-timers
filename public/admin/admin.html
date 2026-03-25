@@ -19,6 +19,7 @@
   <!-- Кнопка смены темы -->
   <button class="btn btn-download" id="check-updates-btn" title="Проверить и установить обновления">🔁 Проверить обновления</button>
   <span id="build-version" style="margin-left:8px; color: var(--text-muted); font-size: 0.9rem;"></span>
+  <button class="btn btn-download" id="admin-password-btn" title="Изменить пароль администратора">🔒 Пароль</button>
   <button id="theme-toggle-admin" class="btn-theme-toggle" title="Переключить тему">🌙</button>
   <span id="current-user" style="margin-left:10px; color: var(--text-muted); font-size: 0.95rem;"></span>
   <button id="logout-btn-admin" class="btn btn-cancel" title="Выйти">🚪 Выйти</button>
@@ -312,11 +313,43 @@
   </div>
 </div>
 
+<div id="admin-password-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>🔒 Пароль администратора</h2>
+      <button class="modal-close" id="admin-password-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Текущий пароль</label>
+        <input id="admin-pass-current" type="password" autocomplete="current-password">
+      </div>
+      <div class="form-group">
+        <label>Новый пароль</label>
+        <input id="admin-pass-new" type="password" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Повторите новый пароль</label>
+        <input id="admin-pass-confirm" type="password" autocomplete="new-password">
+      </div>
+      <div id="admin-pass-error" style="min-height:20px; color: var(--danger-color);"></div>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div>
+        <button class="btn btn-save" id="admin-pass-save">Сохранить</button>
+        <button class="btn btn-cancel" id="admin-pass-cancel">Отмена</button>
+      </div>
+    </div>
+  </div>
+</div>
+
   <footer class="app-footer">
     <span class="app-footer-text">Developed by <span class="app-footer-brand">StreetER</span>.</span>
   </footer>
 <script type="module" src="js/admin-app.js"></script>
 <script type="module" src="js/admin-updates.js"></script>
+<script type="module" src="js/admin-password.js"></script>
 <script type="module" src="js/admin-theme.js"></script>
 <script type="module" src="/shared/js/current-user.js"></script>
 <script type="module" src="/shared/js/logout.js"></script>

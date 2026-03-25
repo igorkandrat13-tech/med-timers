@@ -820,7 +820,7 @@ body.events-collapsed #events-toggle {
 }
 
 .bed-card.running .procedure-name { color: var(--success-dark); }
-.bed-card.paused .procedure-name { color: var(--warning-text-dark); }
+.bed-card.paused .procedure-name { color: rgba(255, 255, 255, 0.92); }
 .bed-card.completed .procedure-name { color: var(--danger-text-dark); }
 
 @media (orientation: portrait) and (max-width: 992px) {

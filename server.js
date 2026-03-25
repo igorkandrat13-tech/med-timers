@@ -50,6 +50,49 @@ const AUTH_SECRET = process.env.AUTH_SECRET || 'change-this-secret';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
+const adminAuthFile = path.join(__dirname, 'admin_auth.json');
+let adminAuth = null;
+
+function deriveAdminPasswordHash(password, saltBase64) {
+    const salt = Buffer.from(String(saltBase64 || ''), 'base64');
+    const key = crypto.pbkdf2Sync(String(password || ''), salt, 120000, 32, 'sha256');
+    return key.toString('hex');
+}
+
+function loadAdminAuth() {
+    if (!fs.existsSync(adminAuthFile)) return null;
+    try {
+        const raw = JSON.parse(fs.readFileSync(adminAuthFile, 'utf8'));
+        if (!raw || typeof raw !== 'object') return null;
+        if (typeof raw.salt !== 'string' || typeof raw.hash !== 'string') return null;
+        if (!raw.salt.trim() || !raw.hash.trim()) return null;
+        return { salt: raw.salt, hash: raw.hash };
+    } catch {
+        return null;
+    }
+}
+
+function verifyAdminPassword(password) {
+    if (adminAuth && adminAuth.salt && adminAuth.hash) {
+        const computed = deriveAdminPasswordHash(password, adminAuth.salt);
+        const a = Buffer.from(computed, 'hex');
+        const b = Buffer.from(String(adminAuth.hash), 'hex');
+        if (a.length !== b.length) return false;
+        return crypto.timingSafeEqual(a, b);
+    }
+    return String(password || '') === String(ADMIN_PASSWORD || '');
+}
+
+function setAdminPassword(newPassword) {
+    const salt = crypto.randomBytes(16).toString('base64');
+    const hash = deriveAdminPasswordHash(newPassword, salt);
+    const payload = { version: 1, salt, hash, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(adminAuthFile, JSON.stringify(payload, null, 2));
+    adminAuth = { salt, hash };
+}
+
+adminAuth = loadAdminAuth();
+
 function hashPin(pin) {
     return crypto.createHmac('sha256', AUTH_SECRET).update(`pin:${String(pin)}`).digest('hex');
 }
@@ -122,7 +165,7 @@ app.post('/api/auth/login', (req, res) => {
 
     if (role === 'admin') {
         const { username, password } = req.body || {};
-        if (username !== ADMIN_USER || password !== ADMIN_PASSWORD) {
+        if (username !== ADMIN_USER || !verifyAdminPassword(password)) {
             return res.status(401).json({ error: 'Неверные учетные данные' });
         }
         const exp = Date.now() + 1000 * 60 * 60 * 12;
@@ -162,6 +205,19 @@ app.get('/api/auth/me', (req, res) => {
     const payload = verifyToken(cookies.mtoken);
     if (!payload) return res.json({ role: null });
     res.json({ role: payload.role, sub: payload.sub || null, userId: payload.userId || null, fio: payload.fio || null });
+});
+
+app.post('/api/admin/password', ensureApiRole('admin'), (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!verifyAdminPassword(currentPassword)) {
+        return res.status(401).json({ error: 'Неверный текущий пароль' });
+    }
+    const next = String(newPassword || '');
+    if (next.length < 6 || next.length > 64) {
+        return res.status(400).json({ error: 'Новый пароль должен быть 6–64 символа' });
+    }
+    setAdminPassword(next);
+    res.json({ success: true });
 });
 
 app.get('/api/users/public', (req, res) => {

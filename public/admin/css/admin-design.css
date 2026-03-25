@@ -37,6 +37,9 @@
   --btn-cancel-text: #475569;
   --btn-cancel-border: #cbd5e1;
   --btn-save-bg: #10b981;
+  --btn-pause-bg: #b45309;
+  --btn-resume-bg: #2563eb;
+  --btn-next-bg: #0ea5e9;
 }
 
 [data-theme="dark"] {
@@ -261,6 +264,9 @@ tr:last-child td {
 
 .btn-start { background: var(--btn-start-bg); }
 .btn-stop { background: var(--btn-stop-bg); }
+.btn-pause { background: var(--btn-pause-bg); }
+.btn-resume { background: var(--btn-resume-bg); }
+.btn-next { background: var(--btn-next-bg); }
 .btn-reset { background: var(--btn-reset-bg); }
 .btn-edit { background: var(--btn-edit-bg); }
 .btn-delete { background: var(--btn-delete-bg); }
