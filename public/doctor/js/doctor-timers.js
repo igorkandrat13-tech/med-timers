@@ -153,8 +153,8 @@ export function renderBedsGrid() {
         const timerText = formatTime(bed);
         const procedureText = getProcedureDisplay(bed); // ✅ Используем новую функцию
         let statusText = getStatusText(bed);
-        if (bed.status === 'paused' && procedureText && procedureText !== '—') {
-            statusText = `${procedureText} (пауза)`;
+        if (bed.status === 'paused' && bed.procedureName) {
+            statusText = `${bed.procedureName} (пауза)`;
         }
         const progressPercent = getProgress(bed);
 
@@ -274,8 +274,8 @@ export function updateSidebar() {
     if (statusEl) {
         const procText = getProcedureDisplay(bed);
         let statusText = getStatusText(bed);
-        if (bed.status === 'paused' && procText && procText !== '—') {
-            statusText = `${procText} (пауза)`;
+        if (bed.status === 'paused' && bed.procedureName) {
+            statusText = `${bed.procedureName} (пауза)`;
         }
         statusEl.textContent = statusText;
     }
