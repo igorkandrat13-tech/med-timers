@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 const crypto = require('crypto');
+const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = 3000;
@@ -795,6 +796,198 @@ app.get('/timers_log.csv', (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=timers_log.csv');
     res.sendFile(logFile);
+});
+
+function parseRuDateTime(dateStr, timeStr) {
+    const d = String(dateStr || '').trim();
+    const t = String(timeStr || '').trim();
+    const m = d.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    const tm = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!m || !tm) return null;
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    const year = Number(m[3]);
+    const hour = Number(tm[1]);
+    const minute = Number(tm[2]);
+    const second = Number(tm[3] || '0');
+    const dt = new Date(year, month - 1, day, hour, minute, second, 0);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt;
+}
+
+function parseLogLine(line) {
+    const raw = String(line || '').trim();
+    if (!raw) return null;
+    const parts = raw.split(',');
+    if (parts.length < 7) return null;
+    const date = parts[0];
+    const time = parts[1];
+    const bedId = parseInt(parts[2], 10);
+    const event = parts[3];
+    const durationMin = Number(parts[4]);
+    const operator = parts[5];
+    const procedureName = parts.slice(6).join(',').trim();
+    const ts = parseRuDateTime(date, time);
+    if (!Number.isFinite(bedId)) return null;
+    return {
+        ts,
+        date,
+        time,
+        bedId,
+        event: String(event || '').trim(),
+        durationMin: Number.isFinite(durationMin) ? durationMin : null,
+        operator: String(operator || '').trim(),
+        procedureName: procedureName || null
+    };
+}
+
+function buildProcedureSessions(rows) {
+    const openByBed = new Map();
+    const sessions = [];
+
+    for (const row of rows) {
+        if (!row || !row.ts) continue;
+        const bedId = row.bedId;
+        const ev = row.event;
+
+        if (ev === 'Старт') {
+            const session = {
+                bedId,
+                operator: row.operator || '',
+                procedureName: row.procedureName || '',
+                startedAt: row.ts,
+                endedAt: null,
+                result: null,
+                cancelEvent: null,
+                plannedMinutes: row.durationMin || 0
+            };
+            openByBed.set(bedId, session);
+            continue;
+        }
+
+        const current = openByBed.get(bedId);
+        if (!current) continue;
+
+        if (ev === 'Следующий этап') {
+            if (row.durationMin) current.plannedMinutes += row.durationMin;
+            continue;
+        }
+
+        if (ev === 'Завершено') {
+            current.endedAt = row.ts;
+            current.result = 'completed';
+            sessions.push(current);
+            openByBed.delete(bedId);
+            continue;
+        }
+
+        if (ev === 'Сброс' || ev === 'Стоп') {
+            current.endedAt = row.ts;
+            current.result = 'cancelled';
+            current.cancelEvent = ev;
+            sessions.push(current);
+            openByBed.delete(bedId);
+        }
+    }
+
+    return sessions;
+}
+
+app.get('/api/logs.xlsx', ensureApiRole('admin'), async (req, res) => {
+    try {
+        const fromStr = String(req.query.from || '').trim();
+        const toStr = String(req.query.to || '').trim();
+        const bedRaw = req.query.bed;
+        const operatorRaw = req.query.operator;
+
+        let bedSet = null;
+        if (bedRaw !== undefined) {
+            let arr = Array.isArray(bedRaw) ? bedRaw : [String(bedRaw || '')];
+            arr = arr.join(',').split(',').map(s => parseInt(String(s).trim(), 10)).filter(n => Number.isFinite(n));
+            if (arr.length > 0) bedSet = new Set(arr);
+        }
+
+        let operatorSet = null;
+        if (operatorRaw !== undefined) {
+            let arr = Array.isArray(operatorRaw) ? operatorRaw : [String(operatorRaw || '')];
+            arr = arr.join(',').split(',').map(s => String(s).trim()).filter(Boolean);
+            if (arr.length > 0) operatorSet = new Set(arr);
+        }
+
+        let fromDt = null;
+        let toDt = null;
+        if (fromStr) {
+            const m = fromStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) fromDt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+        }
+        if (toStr) {
+            const m = toStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) toDt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999);
+        }
+
+        const content = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+        const rows = String(content || '').split('\n').map(parseLogLine).filter(Boolean);
+        const sessions = buildProcedureSessions(rows)
+            .filter(s => s.endedAt)
+            .filter(s => (bedSet ? bedSet.has(s.bedId) : true))
+            .filter(s => (operatorSet ? operatorSet.has(s.operator) : true))
+            .filter(s => (fromDt ? ((s.endedAt && s.endedAt >= fromDt) || (!s.endedAt && s.startedAt >= fromDt)) : true))
+            .filter(s => (toDt ? ((s.endedAt && s.endedAt <= toDt) || (!s.endedAt && s.startedAt <= toDt)) : true))
+            .sort((a, b) => a.startedAt - b.startedAt);
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Журнал');
+
+        sheet.columns = [
+            { header: 'Дата', key: 'date', width: 12 },
+            { header: 'Время начала', key: 'startTime', width: 12 },
+            { header: 'Время конца', key: 'endTime', width: 12 },
+            { header: 'Койка', key: 'bed', width: 8 },
+            { header: 'Пользователь', key: 'user', width: 22 },
+            { header: 'Процедура', key: 'proc', width: 34 },
+            { header: 'План (мин)', key: 'planned', width: 12 },
+            { header: 'Факт (мин)', key: 'actual', width: 12 },
+            { header: 'Результат', key: 'result', width: 14 },
+            { header: 'Причина отмены', key: 'cancel', width: 18 }
+        ];
+
+        sessions.forEach(s => {
+            const dd = s.startedAt;
+            const ee = s.endedAt;
+            const date = dd.toLocaleDateString('ru-RU');
+            const startTime = dd.toLocaleTimeString('ru-RU');
+            const endTime = ee ? ee.toLocaleTimeString('ru-RU') : '';
+            const actual = ee ? Math.max(0, Math.round((ee.getTime() - dd.getTime()) / 60000)) : '';
+            const planned = Number.isFinite(s.plannedMinutes) && s.plannedMinutes > 0 ? s.plannedMinutes : '';
+            const result = s.result === 'completed' ? 'Завершено' : 'Отменено';
+            const cancel = s.result === 'cancelled' ? (s.cancelEvent || 'Отмена') : '';
+            sheet.addRow({
+                date,
+                startTime,
+                endTime,
+                bed: s.bedId,
+                user: s.operator || '',
+                proc: s.procedureName || '',
+                planned,
+                actual,
+                result,
+                cancel
+            });
+        });
+
+        sheet.getRow(1).font = { bold: true };
+        sheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: sheet.columns.length }
+        };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="timers_log.xlsx"');
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (e) {
+        res.status(500).json({ error: 'Export failed', details: e.message || String(e) });
+    }
 });
 
 // ==================== WEBSOCKET СЕРВЕР ====================

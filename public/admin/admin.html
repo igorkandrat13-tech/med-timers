@@ -12,7 +12,7 @@
     <h1>🕗 Панель управления таймерами (14 коек)</h1>
     <div class="header-actions">
   <span id="connection-status">🟢 Подключено</span>
-  <a href="/timers_log.csv" class="btn btn-download">📥 Скачать журнал (CSV)</a>
+  <button class="btn btn-download" id="download-log-btn">📥 Скачать журнал</button>
   <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
   <button class="btn btn-procedures" onclick="openUsersModal()">👤 Пользователи</button>
   <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
@@ -108,6 +108,59 @@
     </div>
   </div>
   </div>
+
+<div id="download-log-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>📥 Скачать журнал</h2>
+      <button class="modal-close" id="download-log-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Период (с)</label>
+        <input id="log-from" type="date">
+      </div>
+      <div class="form-group">
+        <label>Период (по)</label>
+        <input id="log-to" type="date">
+      </div>
+      <div class="form-group" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-reset" id="log-preset-today" type="button">Сегодня</button>
+        <button class="btn btn-reset" id="log-preset-yesterday" type="button">Вчера</button>
+        <button class="btn btn-reset" id="log-preset-7d" type="button">Последние 7 дней</button>
+        <button class="btn btn-reset" id="log-preset-month" type="button">Этот месяц</button>
+        <button class="btn btn-reset" id="log-preset-prev-month" type="button">Прошлый месяц</button>
+      </div>
+      <div class="form-group">
+        <label>Койки</label>
+        <div id="log-beds"></div>
+        <div style="margin-top:6px; display:flex; gap:8px;">
+          <button class="btn btn-reset" id="log-bed-select-all" type="button">Выбрать все</button>
+          <button class="btn btn-cancel" id="log-bed-clear" type="button">Очистить</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Пользователи</label>
+        <div id="log-operators"></div>
+        <div style="margin-top:6px; display:flex; gap:8px;">
+          <button class="btn btn-reset" id="log-operator-select-all" type="button">Выбрать всех</button>
+          <button class="btn btn-cancel" id="log-operator-clear" type="button">Очистить</button>
+        </div>
+      </div>
+      <div class="users-footnote" style="margin-top: 6px;">
+        В XLSX попадают только запущенные процедуры (Старт → Завершено/Сброс/Стоп). Отмены помечаются.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div>
+        <a class="btn btn-download" id="download-log-xlsx" href="#">⬇️ XLSX</a>
+        <a class="btn btn-download" id="download-log-csv" href="/timers_log.csv">CSV</a>
+        <button class="btn btn-cancel" id="download-log-cancel">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Модалка: Добавить пользователя -->
 <div id="add-user-modal" class="modal" style="display:none;">
@@ -356,5 +409,6 @@
 <script type="module" src="/shared/js/logout.js"></script>
 <script src="/shared/js/qrcode.min.js"></script>
 <script type="module" src="js/admin-qr.js"></script>
+<script type="module" src="js/admin-log-download.js"></script>
 </body>
 </html>
