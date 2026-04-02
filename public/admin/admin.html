@@ -14,6 +14,7 @@
   <span id="connection-status">🟢 Подключено</span>
   <button class="btn btn-download" id="download-log-btn">📥 Скачать журнал</button>
   <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
+  <button class="btn btn-procedures" id="cabin-bindings-btn">🧷 Привязка к кабинкам</button>
   <button class="btn btn-procedures" onclick="openUsersModal()">👤 Пользователи</button>
   <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
   <!-- Кнопка смены темы -->
@@ -72,6 +73,36 @@
             </table>
         </div>
     </div>
+</div>
+
+<div id="cabin-bindings-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🧷 Привязка процедур к кабинкам</h2>
+      <button class="modal-close" id="cabin-bindings-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Кабинка</label>
+        <select id="cabin-bindings-cabin"></select>
+      </div>
+      <div class="form-group">
+        <label>Поиск процедуры</label>
+        <input id="cabin-bindings-search" type="text" placeholder="Начните вводить название...">
+      </div>
+      <div class="form-group">
+        <label>Процедуры (отметьте доступные для выбранной кабинки)</label>
+        <div id="cabin-bindings-list" style="display:flex; flex-direction:column; gap:8px; max-height: 45vh; overflow:auto; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input);"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div>
+        <button class="btn btn-save" id="cabin-bindings-save" type="button">Сохранить</button>
+        <button class="btn btn-cancel" id="cabin-bindings-cancel" type="button">Закрыть</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Модальное окно пользователей -->
@@ -433,5 +464,6 @@
 <script src="/shared/js/qrcode.min.js"></script>
 <script type="module" src="js/admin-qr.js"></script>
 <script type="module" src="js/admin-log-download.js"></script>
+<script type="module" src="js/admin-cabin-bindings.js"></script>
 </body>
 </html>

@@ -5,7 +5,6 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 const crypto = require('crypto');
-const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = 3000;
@@ -766,7 +765,7 @@ app.post('/api/procedures', (req, res) => {
     };
 
     const cabins = normalizeCabinsList(allowedCabins);
-    if (cabins !== null) newProcedure.allowedCabins = cabins;
+    if (cabins !== null && cabins.length > 0 && cabins.length < MAX_BEDS) newProcedure.allowedCabins = cabins;
 
     if (Array.isArray(stages) && stages.length > 0) {
         newProcedure.stages = stages;
@@ -800,7 +799,7 @@ app.put('/api/procedures/:id', (req, res) => {
 
     if (allowedCabins !== undefined) {
         const cabins = normalizeCabinsList(allowedCabins);
-        if (cabins === null || cabins.length === 0) {
+        if (cabins === null || cabins.length === 0 || cabins.length === MAX_BEDS) {
             delete procedures[index].allowedCabins;
         } else {
             procedures[index].allowedCabins = cabins;
@@ -928,6 +927,12 @@ function buildProcedureSessions(rows) {
 
 app.get('/api/logs.xlsx', ensureApiRole('admin'), async (req, res) => {
     try {
+        let ExcelJS;
+        try {
+            ExcelJS = require('exceljs');
+        } catch (e) {
+            return res.status(503).json({ error: 'XLSX generation module not installed' });
+        }
         const fromStr = String(req.query.from || '').trim();
         const toStr = String(req.query.to || '').trim();
         const bedRaw = req.query.bed;
