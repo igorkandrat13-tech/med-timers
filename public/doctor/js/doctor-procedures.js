@@ -115,6 +115,9 @@ function renderProcedureDropdownOptions(query) {
         .sort((a, b) => {
             const an = String(a.name || '');
             const bn = String(b.name || '');
+            const ao = Number.isFinite(a.order) ? a.order : 1e9;
+            const bo = Number.isFinite(b.order) ? b.order : 1e9;
+            if (ao !== bo) return ao - bo;
             if (q) {
                 const ai = an.toLowerCase().indexOf(q);
                 const bi = bn.toLowerCase().indexOf(q);

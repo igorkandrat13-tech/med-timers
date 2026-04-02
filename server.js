@@ -756,11 +756,13 @@ app.post('/api/procedures', (req, res) => {
     }
 
     const maxId = procedures.length > 0 ? Math.max(...procedures.map(p => p.id)) : 0;
+    const maxOrder = procedures.length > 0 ? Math.max(...procedures.map(p => Number.isFinite(p.order) ? p.order : 0)) : 0;
     const newProcedure = {
         id: maxId + 1,
         name: name.trim(),
         duration: parseFloat(duration) || 0,
         active: true,
+        order: maxOrder + 1,
         createdAt: new Date().toISOString()
     };
 
@@ -779,7 +781,7 @@ app.post('/api/procedures', (req, res) => {
 
 app.put('/api/procedures/:id', (req, res) => {
     const procedureId = parseInt(req.params.id);
-    const { name, duration, active, stages, allowedCabins } = req.body;
+    const { name, duration, active, stages, allowedCabins, order } = req.body;
     const index = procedures.findIndex(p => p.id === procedureId);
     if (index === -1) {
         return res.status(404).json({ error: 'Процедура не найдена' });
@@ -806,8 +808,44 @@ app.put('/api/procedures/:id', (req, res) => {
         }
     }
 
+    if (order !== undefined) {
+        const n = parseInt(order, 10);
+        if (!Number.isFinite(n) || n < 1) {
+            return res.status(400).json({ error: 'Некорректный порядок' });
+        }
+        procedures[index].order = n;
+    }
+
     saveProceduresToFile();
     res.json({ success: true, procedure: procedures[index] });
+    broadcastProcedures();
+});
+
+app.post('/api/procedures/order', ensureApiRole('admin'), (req, res) => {
+    const { orders } = req.body || {};
+    if (!Array.isArray(orders) || orders.length === 0) {
+        return res.status(400).json({ error: 'orders обязателен' });
+    }
+    const updates = [];
+    for (const item of orders) {
+        if (!item || item.id === undefined || item.order === undefined) continue;
+        const id = parseInt(item.id, 10);
+        const ord = parseInt(item.order, 10);
+        if (!Number.isFinite(id) || !Number.isFinite(ord) || ord < 1) {
+            return res.status(400).json({ error: 'Некорректные данные в orders' });
+        }
+        updates.push({ id, order: ord });
+    }
+    if (updates.length === 0) {
+        return res.status(400).json({ error: 'orders пуст' });
+    }
+    const byId = new Map(procedures.map(p => [p.id, p]));
+    for (const u of updates) {
+        const p = byId.get(u.id);
+        if (p) p.order = u.order;
+    }
+    saveProceduresToFile();
+    res.json({ success: true });
     broadcastProcedures();
 });
 

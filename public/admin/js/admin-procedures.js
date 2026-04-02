@@ -2,13 +2,56 @@
 import { apiRequest, showNotification } from './admin-utils.js';
 
 const CABIN_COUNT = 14;
+let didNormalizeOrders = false;
 
 export async function loadProcedures() {
     try {
         const procedures = await apiRequest('/api/procedures');
+        await normalizeOrdersIfNeeded(procedures);
         renderProceduresTable(procedures);
     } catch (error) {
         console.error('Ошибка загрузки процедур:', error);
+    }
+}
+
+function sortProceduresForDisplay(procedures) {
+    return [...(procedures || [])].sort((a, b) => {
+        const ao = Number.isFinite(a.order) ? a.order : 1e9;
+        const bo = Number.isFinite(b.order) ? b.order : 1e9;
+        if (ao !== bo) return ao - bo;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+    });
+}
+
+function buildNormalizedOrders(procedures) {
+    const sorted = sortProceduresForDisplay(procedures);
+    const used = new Set();
+    let needs = false;
+    sorted.forEach(p => {
+        const o = Number.isFinite(p.order) ? p.order : null;
+        if (!o) needs = true;
+        else if (used.has(o)) needs = true;
+        else used.add(o);
+    });
+    const orders = sorted.map((p, idx) => ({ id: p.id, order: idx + 1 }));
+    return { sorted, needs, orders };
+}
+
+async function normalizeOrdersIfNeeded(procedures) {
+    if (didNormalizeOrders) return;
+    const { needs, orders } = buildNormalizedOrders(procedures);
+    if (!needs) {
+        didNormalizeOrders = true;
+        return;
+    }
+    try {
+        await apiRequest('/api/procedures/order', {
+            method: 'POST',
+            body: JSON.stringify({ orders })
+        });
+    } catch (_) {
+    } finally {
+        didNormalizeOrders = true;
     }
 }
 
@@ -16,21 +59,30 @@ function renderProceduresTable(procedures) {
     const tbody = document.getElementById('procedures-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
-    procedures.forEach(proc => {
+    const sorted = sortProceduresForDisplay(procedures);
+    sorted.forEach((proc, idx) => {
         const tr = document.createElement('tr');
         // Проверка на наличие stages для отображения иконки
         const hasStagesIcon = proc.stages && proc.stages.length > 0 ? ' 📋 ' : '';
         const cabins = Array.isArray(proc.allowedCabins) && proc.allowedCabins.length
             ? proc.allowedCabins.join(', ')
             : 'Все';
+        const canUp = idx > 0;
+        const canDown = idx < sorted.length - 1;
         tr.innerHTML = `
+            <td>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="min-width: 28px; display:inline-block;">${Number.isFinite(proc.order) ? proc.order : ''}</span>
+                    <button class="btn btn-reset" ${canUp ? '' : 'disabled'} onclick="event.stopPropagation(); window.moveProcedure(${proc.id}, -1)">▲</button>
+                    <button class="btn btn-reset" ${canDown ? '' : 'disabled'} onclick="event.stopPropagation(); window.moveProcedure(${proc.id}, 1)">▼</button>
+                </div>
+            </td>
             <td>${proc.id}</td>
             <td>${hasStagesIcon}${proc.name}</td>
             <td>${cabins}</td>
             <!-- ✅ ИСПРАВЛЕНО: используем toFixed(1) для отображения дробей -->
             <td>${parseFloat(proc.duration).toFixed(1)}</td>
             <td>${proc.active ? ' ✅ Активна' : ' ❌ Неактивна'}</td>
-            <td>${proc.createdAt ? new Date(proc.createdAt).toLocaleDateString('ru-RU') : '-'}</td>
             <td>
                 <button class="btn btn-edit" onclick="window.editProcedure(${proc.id})"> ✏️ </button>
                 <button class="btn btn-delete" onclick="window.deleteProcedure(${proc.id})"> 🗑️ </button>
@@ -87,6 +139,27 @@ function initCabinsActions(containerId, allBtnId, clearBtnId) {
 
 // Глобальные функции
 window.loadProcedures = loadProcedures;
+window.moveProcedure = async (id, dir) => {
+    const procedures = await apiRequest('/api/procedures');
+    const { sorted } = buildNormalizedOrders(procedures);
+    const index = sorted.findIndex(p => p.id === id);
+    const nextIndex = index + dir;
+    if (index < 0 || nextIndex < 0 || nextIndex >= sorted.length) return;
+
+    const a = sorted[index];
+    const b = sorted[nextIndex];
+    const updates = [
+        { id: a.id, order: nextIndex + 1 },
+        { id: b.id, order: index + 1 }
+    ];
+
+    await apiRequest('/api/procedures/order', {
+        method: 'POST',
+        body: JSON.stringify({ orders: updates })
+    });
+    await loadProcedures();
+    showNotification('Порядок обновлён', 'success');
+};
 
 // --- ЛОГИКА ДОБАВЛЕНИЯ ---
 window.openAddProcedureModal = () => {
