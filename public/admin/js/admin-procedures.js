@@ -51,8 +51,8 @@ function renderProceduresTable(procedures) {
         const tr = document.createElement('tr');
         // Проверка на наличие stages для отображения иконки
         const hasStagesIcon = proc.stages && proc.stages.length > 0 ? ' 📋 ' : '';
-        const cabins = Array.isArray(proc.allowedCabins) && proc.allowedCabins.length
-            ? proc.allowedCabins.join(', ')
+        const cabins = Array.isArray(proc.allowedCabins)
+            ? (proc.allowedCabins.length ? proc.allowedCabins.join(', ') : 'Нет')
             : 'Все';
         tr.innerHTML = `
             <td>${proc.id}</td>
@@ -205,7 +205,7 @@ window.saveProcedure = async () => {
 
     const selectedCabins = getSelectedCabins(document.getElementById('add-procedure-cabins'));
     const cabinCount = (getCabins() || []).length || 14;
-    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === cabinCount) ? [] : selectedCabins;
+    const allowedCabins = selectedCabins.length === cabinCount ? undefined : selectedCabins;
     
     try {
         await apiRequest('/api/procedures', {
@@ -329,7 +329,7 @@ window.updateProcedure = async () => {
 
     const selectedCabins = getSelectedCabins(document.getElementById('edit-procedure-cabins'));
     const cabinCount = (getCabins() || []).length || 14;
-    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === cabinCount) ? [] : selectedCabins;
+    const allowedCabins = selectedCabins.length === cabinCount ? undefined : selectedCabins;
     
     try {
         await apiRequest(`/api/procedures/${id}`, {

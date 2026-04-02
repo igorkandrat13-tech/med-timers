@@ -147,7 +147,7 @@ export function renderBedsGrid() {
 
     const selectedProc = selectedProcedureId ? getProcedureById(selectedProcedureId) : null;
     const allowedList = selectedProc && Array.isArray(selectedProc.allowedCabins) ? selectedProc.allowedCabins : null;
-    const allowedSet = allowedList && allowedList.length ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
+    const allowedSet = allowedList ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
 
     const sortedCabins = getCabinsSortedByNumber();
     const bedIds = (sortedCabins && sortedCabins.length)
@@ -235,7 +235,7 @@ function getButtonsHTML(bed, bedId) {
     if (status === 'idle') {
         const selectedProc = selectedProcedureId ? getProcedureById(selectedProcedureId) : null;
         const allowedList = selectedProc && Array.isArray(selectedProc.allowedCabins) ? selectedProc.allowedCabins : null;
-        const allowedSet = allowedList && allowedList.length ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
+        const allowedSet = allowedList ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
         const disabled = allowedSet && !allowedSet.has(bedId);
         const title = disabled ? 'Процедура недоступна для этой кабинки' : '';
         return `<button class="btn-start" ${disabled ? 'disabled' : ''} title="${title}" onclick="event.stopPropagation(); window.handleStart(${bedId})">▶ Старт</button>`;
@@ -353,7 +353,7 @@ window.handleStart = (bedId) => {
         return;
     }
 
-    if (Array.isArray(proc.allowedCabins) && proc.allowedCabins.length) {
+    if (Array.isArray(proc.allowedCabins)) {
         const set = new Set(proc.allowedCabins.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n)));
         if (!set.has(bedId)) {
             alert(`⚠️ Процедура недоступна для кабинки ${getCabinDisplayNumber(bedId)}`);

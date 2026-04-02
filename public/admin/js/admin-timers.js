@@ -204,7 +204,8 @@ function populateProcedureSelect(select, durationInput, bedId) {
         .filter(p => p.active)
         .filter(p => {
             if (!bedId) return true;
-            if (!Array.isArray(p.allowedCabins) || p.allowedCabins.length === 0) return true;
+            if (!Array.isArray(p.allowedCabins)) return true;
+            if (p.allowedCabins.length === 0) return false;
             return p.allowedCabins.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n)).includes(bedId);
         });
 

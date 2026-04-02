@@ -23,8 +23,9 @@ function toSortedArray(set) {
 
 function makeExplicitAllowedSet(proc) {
   const list = normalizeCabins(proc.allowedCabins);
-  if (list && list.length > 0) return new Set(list);
-  return buildAllCabinsSet();
+  if (list === null) return buildAllCabinsSet();
+  if (list.length === 0) return new Set();
+  return new Set(list);
 }
 
 function initCabinBindings() {
@@ -53,7 +54,8 @@ function initCabinBindings() {
 
   function buildOriginalKey(proc) {
     const list = normalizeCabins(proc.allowedCabins);
-    if (!list || list.length === 0) return 'ALL';
+    if (list === null) return 'ALL';
+    if (list.length === 0) return 'NONE';
     return list.slice().sort((a, b) => a - b).join(',');
   }
 
@@ -142,7 +144,7 @@ function initCabinBindings() {
       .map((p) => {
         const set = allowedMap.get(p.id) || allCabins;
         const arr = toSortedArray(set);
-        const key = arr.length === cabinCount ? 'ALL' : arr.join(',');
+        const key = arr.length === 0 ? 'NONE' : (arr.length === cabinCount ? 'ALL' : arr.join(','));
         return { id: p.id, key, arr };
       })
       .filter((u) => u.key !== originalKeyMap.get(u.id));
@@ -157,7 +159,7 @@ function initCabinBindings() {
     saveBtn.textContent = 'Сохраняем...';
     try {
       for (const u of updates) {
-        const allowedCabins = (u.arr.length === cabinCount || u.arr.length === 0) ? [] : u.arr;
+        const allowedCabins = u.arr.length === cabinCount ? undefined : u.arr;
         await apiRequest(`/api/procedures/${u.id}`, {
           method: 'PUT',
           body: JSON.stringify({ allowedCabins })

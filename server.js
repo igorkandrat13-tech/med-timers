@@ -579,7 +579,7 @@ function isProcedureAllowedInCabin(proc, cabinId) {
     if (!proc) return true;
     const list = normalizeCabinsList(proc.allowedCabins);
     if (list === null) return true;
-    if (list.length === 0) return true;
+    if (list.length === 0) return false;
     return list.includes(cabinId);
 }
 
@@ -874,7 +874,12 @@ app.post('/api/procedures', (req, res) => {
 
     const cabins = normalizeCabinsList(allowedCabins);
     const cabinCount = getCabinCount();
-    if (cabins !== null && cabins.length > 0 && cabins.length < cabinCount) newProcedure.allowedCabins = cabins;
+    if (cabins !== null) {
+        if (cabins.length === cabinCount) {
+        } else {
+            newProcedure.allowedCabins = cabins;
+        }
+    }
 
     if (Array.isArray(stages) && stages.length > 0) {
         newProcedure.stages = stages;
@@ -907,12 +912,18 @@ app.put('/api/procedures/:id', (req, res) => {
     }
 
     if (allowedCabins !== undefined) {
-        const cabins = normalizeCabinsList(allowedCabins);
-        const cabinCount = getCabinCount();
-        if (cabins === null || cabins.length === 0 || cabins.length === cabinCount) {
+        if (allowedCabins === null) {
             delete procedures[index].allowedCabins;
         } else {
-            procedures[index].allowedCabins = cabins;
+            const cabins = normalizeCabinsList(allowedCabins);
+            const cabinCount = getCabinCount();
+            if (cabins === null) {
+                delete procedures[index].allowedCabins;
+            } else if (cabins.length === cabinCount) {
+                delete procedures[index].allowedCabins;
+            } else {
+                procedures[index].allowedCabins = cabins;
+            }
         }
     }
 
