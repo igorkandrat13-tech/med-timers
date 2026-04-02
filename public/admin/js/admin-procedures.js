@@ -2,12 +2,12 @@
 import { apiRequest, showNotification } from './admin-utils.js';
 
 const CABIN_COUNT = 14;
-let didNormalizeOrders = false;
+let sortKey = 'name';
+let sortDir = 'asc';
 
 export async function loadProcedures() {
     try {
         const procedures = await apiRequest('/api/procedures');
-        await normalizeOrdersIfNeeded(procedures);
         renderProceduresTable(procedures);
     } catch (error) {
         console.error('Ошибка загрузки процедур:', error);
@@ -15,44 +15,31 @@ export async function loadProcedures() {
 }
 
 function sortProceduresForDisplay(procedures) {
-    return [...(procedures || [])].sort((a, b) => {
-        const ao = Number.isFinite(a.order) ? a.order : 1e9;
-        const bo = Number.isFinite(b.order) ? b.order : 1e9;
-        if (ao !== bo) return ao - bo;
-        return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+    const dir = sortDir === 'desc' ? -1 : 1;
+    const list = [...(procedures || [])];
+    list.sort((a, b) => {
+        if (sortKey === 'duration') {
+            const ad = Number(a.duration || 0);
+            const bd = Number(b.duration || 0);
+            if (ad !== bd) return (ad - bd) * dir;
+        } else if (sortKey === 'active') {
+            const aa = a.active ? 1 : 0;
+            const ba = b.active ? 1 : 0;
+            if (aa !== ba) return (ba - aa) * dir;
+        } else if (sortKey === 'cabins') {
+            const ac = Array.isArray(a.allowedCabins) && a.allowedCabins.length ? a.allowedCabins.join(',') : 'Все';
+            const bc = Array.isArray(b.allowedCabins) && b.allowedCabins.length ? b.allowedCabins.join(',') : 'Все';
+            const c = ac.localeCompare(bc, 'ru');
+            if (c !== 0) return c * dir;
+        } else {
+            const an = String(a.name || '');
+            const bn = String(b.name || '');
+            const c = an.localeCompare(bn, 'ru');
+            if (c !== 0) return c * dir;
+        }
+        return Number(a.id || 0) - Number(b.id || 0);
     });
-}
-
-function buildNormalizedOrders(procedures) {
-    const sorted = sortProceduresForDisplay(procedures);
-    const used = new Set();
-    let needs = false;
-    sorted.forEach(p => {
-        const o = Number.isFinite(p.order) ? p.order : null;
-        if (!o) needs = true;
-        else if (used.has(o)) needs = true;
-        else used.add(o);
-    });
-    const orders = sorted.map((p, idx) => ({ id: p.id, order: idx + 1 }));
-    return { sorted, needs, orders };
-}
-
-async function normalizeOrdersIfNeeded(procedures) {
-    if (didNormalizeOrders) return;
-    const { needs, orders } = buildNormalizedOrders(procedures);
-    if (!needs) {
-        didNormalizeOrders = true;
-        return;
-    }
-    try {
-        await apiRequest('/api/procedures/order', {
-            method: 'POST',
-            body: JSON.stringify({ orders })
-        });
-    } catch (_) {
-    } finally {
-        didNormalizeOrders = true;
-    }
+    return list;
 }
 
 function renderProceduresTable(procedures) {
@@ -60,23 +47,14 @@ function renderProceduresTable(procedures) {
     if (!tbody) return;
     tbody.innerHTML = '';
     const sorted = sortProceduresForDisplay(procedures);
-    sorted.forEach((proc, idx) => {
+    sorted.forEach((proc) => {
         const tr = document.createElement('tr');
         // Проверка на наличие stages для отображения иконки
         const hasStagesIcon = proc.stages && proc.stages.length > 0 ? ' 📋 ' : '';
         const cabins = Array.isArray(proc.allowedCabins) && proc.allowedCabins.length
             ? proc.allowedCabins.join(', ')
             : 'Все';
-        const canUp = idx > 0;
-        const canDown = idx < sorted.length - 1;
         tr.innerHTML = `
-            <td>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="min-width: 28px; display:inline-block;">${Number.isFinite(proc.order) ? proc.order : ''}</span>
-                    <button class="btn btn-reset" ${canUp ? '' : 'disabled'} onclick="event.stopPropagation(); window.moveProcedure(${proc.id}, -1)">▲</button>
-                    <button class="btn btn-reset" ${canDown ? '' : 'disabled'} onclick="event.stopPropagation(); window.moveProcedure(${proc.id}, 1)">▼</button>
-                </div>
-            </td>
             <td>${proc.id}</td>
             <td>${hasStagesIcon}${proc.name}</td>
             <td>${cabins}</td>
@@ -139,27 +117,31 @@ function initCabinsActions(containerId, allBtnId, clearBtnId) {
 
 // Глобальные функции
 window.loadProcedures = loadProcedures;
-window.moveProcedure = async (id, dir) => {
-    const procedures = await apiRequest('/api/procedures');
-    const { sorted } = buildNormalizedOrders(procedures);
-    const index = sorted.findIndex(p => p.id === id);
-    const nextIndex = index + dir;
-    if (index < 0 || nextIndex < 0 || nextIndex >= sorted.length) return;
-
-    const a = sorted[index];
-    const b = sorted[nextIndex];
-    const updates = [
-        { id: a.id, order: nextIndex + 1 },
-        { id: b.id, order: index + 1 }
-    ];
-
-    await apiRequest('/api/procedures/order', {
-        method: 'POST',
-        body: JSON.stringify({ orders: updates })
-    });
-    await loadProcedures();
-    showNotification('Порядок обновлён', 'success');
+window.setProceduresSort = (key) => {
+    if (sortKey === key) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortKey = key;
+        sortDir = 'asc';
+    }
+    loadProcedures();
+    const label = key === 'name' ? 'названию'
+        : key === 'duration' ? 'длительности'
+        : key === 'active' ? 'статусу'
+        : 'кабинкам';
+    showNotification(`Сортировка по ${label} (${sortDir === 'asc' ? '▲' : '▼'})`, 'info');
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const nameTh = document.getElementById('proc-sort-name');
+    const durationTh = document.getElementById('proc-sort-duration');
+    const activeTh = document.getElementById('proc-sort-active');
+    const cabinsTh = document.getElementById('proc-sort-cabins');
+    if (nameTh && !nameTh._ps) { nameTh._ps = true; nameTh.addEventListener('click', () => window.setProceduresSort('name')); }
+    if (durationTh && !durationTh._ps) { durationTh._ps = true; durationTh.addEventListener('click', () => window.setProceduresSort('duration')); }
+    if (activeTh && !activeTh._ps) { activeTh._ps = true; activeTh.addEventListener('click', () => window.setProceduresSort('active')); }
+    if (cabinsTh && !cabinsTh._ps) { cabinsTh._ps = true; cabinsTh.addEventListener('click', () => window.setProceduresSort('cabins')); }
+});
 
 // --- ЛОГИКА ДОБАВЛЕНИЯ ---
 window.openAddProcedureModal = () => {
