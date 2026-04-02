@@ -1,7 +1,7 @@
 // ==================== УПРАВЛЕНИЕ ПРОЦЕДУРАМИ ====================
 import { apiRequest, showNotification } from './admin-utils.js';
+import { loadCabins, getCabins, getCabinsSortedByNumber, getCabinDisplayName } from '../../shared/js/cabins-store.js';
 
-const CABIN_COUNT = 14;
 let sortKey = 'name';
 let sortDir = 'asc';
 
@@ -74,15 +74,18 @@ function renderCabins(container, selected) {
     if (!container) return;
     container.innerHTML = '';
     const selectedSet = selected ? new Set(selected) : null;
-    for (let i = 1; i <= CABIN_COUNT; i += 1) {
+    const cabins = getCabinsSortedByNumber();
+    const fallbackCount = (getCabins() || []).length || 14;
+    const list = cabins.length ? cabins : Array.from({ length: fallbackCount }, (_, idx) => ({ id: idx + 1, number: idx + 1, name: `Кабинка ${idx + 1}` }));
+    for (const c of list) {
         const label = document.createElement('label');
         label.className = 'checkbox-label';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.value = String(i);
-        cb.checked = selectedSet ? selectedSet.has(i) : true;
+        cb.value = String(c.id);
+        cb.checked = selectedSet ? selectedSet.has(parseInt(c.id, 10)) : true;
         label.appendChild(cb);
-        label.appendChild(document.createTextNode(` Кабинка ${i}`));
+        label.appendChild(document.createTextNode(` ${String(c.name || getCabinDisplayName(c.id))}`));
         container.appendChild(label);
     }
 }
@@ -146,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- ЛОГИКА ДОБАВЛЕНИЯ ---
 window.openAddProcedureModal = () => {
     document.getElementById('add-procedure-modal').style.display = 'flex';
+    loadCabins().catch(() => {});
     renderCabins(document.getElementById('add-procedure-cabins'));
     initCabinsActions('add-procedure-cabins', 'add-proc-cabins-all', 'add-proc-cabins-clear');
     // Автоматически добавляем первый этап при открытии
@@ -200,7 +204,8 @@ window.saveProcedure = async () => {
     });
 
     const selectedCabins = getSelectedCabins(document.getElementById('add-procedure-cabins'));
-    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === CABIN_COUNT) ? [] : selectedCabins;
+    const cabinCount = (getCabins() || []).length || 14;
+    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === cabinCount) ? [] : selectedCabins;
     
     try {
         await apiRequest('/api/procedures', {
@@ -251,6 +256,7 @@ window.removeStage = (btn) => {
 
 // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
 window.editProcedure = async (id) => {
+    await loadCabins().catch(() => {});
     const procedures = await apiRequest('/api/procedures');
     const proc = procedures.find(p => p.id === id);
     if (!proc) return;
@@ -322,7 +328,8 @@ window.updateProcedure = async () => {
     });
 
     const selectedCabins = getSelectedCabins(document.getElementById('edit-procedure-cabins'));
-    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === CABIN_COUNT) ? [] : selectedCabins;
+    const cabinCount = (getCabins() || []).length || 14;
+    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === cabinCount) ? [] : selectedCabins;
     
     try {
         await apiRequest(`/api/procedures/${id}`, {

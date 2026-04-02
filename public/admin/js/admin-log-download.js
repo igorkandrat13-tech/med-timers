@@ -1,4 +1,5 @@
 import { apiRequest, showNotification } from './admin-utils.js';
+import { loadCabins, getCabinsSortedByNumber } from '../../shared/js/cabins-store.js';
 
 function fmtDateToday() {
   const d = new Date();
@@ -116,16 +117,18 @@ function initLogDownload() {
       toEl.value = dateStr(now);
     }
 
+    await loadCabins().catch(() => {});
+    const cabins = getCabinsSortedByNumber();
     bedsBox.innerHTML = '';
-    for (let i = 1; i <= 14; i += 1) {
+    for (const c of cabins) {
       const label = document.createElement('label');
       label.className = 'checkbox-label';
       const cb = document.createElement('input');
       cb.type = 'checkbox';
-      cb.value = String(i);
+      cb.value = String(c.number);
       cb.addEventListener('change', updateLinks);
       label.appendChild(cb);
-      const text = document.createTextNode(` Кабинка ${i}`);
+      const text = document.createTextNode(` ${String(c.name || `Кабинка ${c.number}`)}`);
       label.appendChild(text);
       bedsBox.appendChild(label);
     }

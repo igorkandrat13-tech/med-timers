@@ -15,6 +15,7 @@
   <button class="btn btn-download" id="download-log-btn">📥 Скачать журнал</button>
   <button class="btn btn-procedures" onclick="openProceduresModal()">📋 Справочник процедур</button>
   <button class="btn btn-procedures" id="cabin-bindings-btn">🧷 Привязка к кабинкам</button>
+  <button class="btn btn-procedures" id="cabins-btn">🧩 Кабинки</button>
   <button class="btn btn-procedures" onclick="openUsersModal()">👤 Пользователи</button>
   <button class="btn btn-download" id="show-qr-btn">🔗 Показать QR</button>
   <!-- Кнопка смены темы -->
@@ -107,6 +108,41 @@
       <div>
         <button class="btn btn-save" id="cabin-bindings-save" type="button">Сохранить</button>
         <button class="btn btn-cancel" id="cabin-bindings-cancel" type="button">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cabins-modal" class="modal" style="display:none;">
+  <div class="modal-content modal-small">
+    <div class="modal-header">
+      <h2>🧩 Кабинки</h2>
+      <button class="modal-close" id="cabins-close-x">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Добавить кабинку</label>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div style="flex:1; min-width:140px;">
+            <label style="display:block; margin-bottom:6px; color: var(--text-muted);">Номер</label>
+            <input id="cabins-add-number" type="number" min="1" step="1" placeholder="например 25">
+          </div>
+          <div style="flex:2; min-width:220px;">
+            <label style="display:block; margin-bottom:6px; color: var(--text-muted);">Название</label>
+            <input id="cabins-add-name" type="text" placeholder="например Кабинка 25">
+          </div>
+          <button class="btn btn-save" id="cabins-add-btn" type="button">Добавить</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Список кабинок</label>
+        <div id="cabins-list" style="max-height: 45vh; overflow:auto; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input);"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div>
+        <button class="btn btn-cancel" id="cabins-cancel" type="button">Закрыть</button>
       </div>
     </div>
   </div>
@@ -472,5 +508,6 @@
 <script type="module" src="js/admin-qr.js"></script>
 <script type="module" src="js/admin-log-download.js"></script>
 <script type="module" src="js/admin-cabin-bindings.js"></script>
+<script type="module" src="js/admin-cabins.js"></script>
 </body>
 </html>

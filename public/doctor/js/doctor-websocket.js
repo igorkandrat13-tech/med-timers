@@ -1,4 +1,5 @@
 import { WebSocketManager } from '../../shared/js/websocket-manager.js';
+import { loadCabins, setCabins, getCabinDisplayNumber } from '../../shared/js/cabins-store.js';
 
 let wsManager = new WebSocketManager('doctor');
 let previousBedsState = null;
@@ -13,6 +14,7 @@ export function connectWebSocket() {
             statusEl.textContent = '✅ Подключено';
             statusEl.style.backgroundColor = '#28a745';
         }
+        loadCabins().catch(() => {});
         lastDisconnectInfo = null;
         
         if (typeof window.loadProcedures === 'function') {
@@ -79,6 +81,15 @@ export function connectWebSocket() {
                 window.setGlobalProcedures(data.procedures);
             }
         }
+        else if (data.type === 'cabins_updated') {
+            if (data.cabins) setCabins(data.cabins);
+            if (typeof window.renderBedsGrid === 'function') {
+                window.renderBedsGrid();
+            }
+            if (typeof window.updateSidebar === 'function') {
+                window.updateSidebar();
+            }
+        }
     });
 
     wsManager.connect();
@@ -123,7 +134,7 @@ function handleStageCompleted(data, bedsState) {
     if (typeof window.addEventLog === 'function') {
         const bed = bedsState[bedId - 1];
         const procName = bed?.procedureName || 'процедура';
-        window.addEventLog('stage_completed', `Этап ${currentStage} из ${totalStages} завершён (${procName}) в кабинке ${bedId}`);
+        window.addEventLog('stage_completed', `Этап ${currentStage} из ${totalStages} завершён (${procName}) в кабинке ${getCabinDisplayNumber(bedId)}`);
     }
 }
 
@@ -157,39 +168,40 @@ function detectStatusChanges(newBeds) {
     
     newBeds.forEach((bed, index) => {
         const bedId = index + 1;
+        const cabinNumber = getCabinDisplayNumber(bedId);
         const prevBed = previousBedsState[index];
         if (!prevBed) return;
         
         if (bed.status !== prevBed.status) {
-            handleStatusChange(bed, bedId, prevBed);
+            handleStatusChange(bed, bedId, cabinNumber, prevBed);
         }
     });
     
     previousBedsState = JSON.parse(JSON.stringify(newBeds));
 }
 
-function handleStatusChange(bed, bedId, prevBed) {
+function handleStatusChange(bed, bedId, cabinNumber, prevBed) {
     const procName = bed.procedureName || prevBed.procedureName || 'процедуры';
     if (typeof window.addEventLog !== 'function') return;
 
     switch(bed.status) {
         case 'running':
             if (prevBed.status === 'idle') {
-                window.addEventLog('start', `Запущена "${procName}" в кабинке ${bedId}`);
+                window.addEventLog('start', `Запущена "${procName}" в кабинке ${cabinNumber}`);
             } else if (prevBed.status === 'paused') {
-                window.addEventLog('resume', `Возобновлена "${procName}" в кабинке ${bedId}`);
+                window.addEventLog('resume', `Возобновлена "${procName}" в кабинке ${cabinNumber}`);
             }
             break;
         case 'paused':
-            window.addEventLog('pause', `Пауза "${procName}" в кабинке ${bedId}`);
+            window.addEventLog('pause', `Пауза "${procName}" в кабинке ${cabinNumber}`);
             break;
         case 'idle':
             if (prevBed.status === 'completed' || prevBed.status === 'running') {
-                window.addEventLog('reset', `Сброшена кабинка ${bedId}`);
+                window.addEventLog('reset', `Сброшена кабинка ${cabinNumber}`);
             }
             break;
         case 'completed':
-            window.addEventLog('completed', `Завершена "${procName}" в кабинке ${bedId}`);
+            window.addEventLog('completed', `Завершена "${procName}" в кабинке ${cabinNumber}`);
             break;
     }
 }
@@ -199,7 +211,7 @@ function showCompletionNotification(procedureName, bedId) {
     const text = document.getElementById('completion-text');
     
     if (notification && text) {
-        text.textContent = `Процедура "${procedureName}" в кабинке ${bedId} завершена!`;
+        text.textContent = `Процедура "${procedureName}" в кабинке ${getCabinDisplayNumber(bedId)} завершена!`;
         notification.style.display = 'flex';
         setTimeout(() => window.closeCompletionNotification(), 10000);
     }
@@ -231,7 +243,7 @@ export async function sendControlCommand(bedId, action, minutes = 0, procedureNa
             window.showNotification('Нет соединения. Команда поставлена в очередь.', 'warning');
         }
         if (typeof window.addEventLog === 'function') {
-            window.addEventLog('info', `Команда в очереди: ${action} (кабинка ${bedId})`);
+            window.addEventLog('info', `Команда в очереди: ${action} (кабинка ${getCabinDisplayNumber(bedId)})`);
         }
         return;
     }

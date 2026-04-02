@@ -111,6 +111,20 @@ export async function apiRequest(url, options = {}) {
       ...options.headers
     }
   });
+  if (response.status === 401 || response.status === 403) {
+    try {
+      showNotification('Сессия истекла. Требуется повторный вход.', 'warning');
+    } catch (_) {
+    }
+    try {
+      const p = String(window.location.pathname || '');
+      const role = p.startsWith('/doctor') ? 'doctor' : p.startsWith('/admin') ? 'admin' : '';
+      const target = role ? `/auth/login.html?role=${role}` : '/auth/login.html';
+      setTimeout(() => { window.location.href = target; }, 600);
+    } catch (_) {
+    }
+    throw new Error('Unauthorized');
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
     throw new Error(error.error || response.statusText);

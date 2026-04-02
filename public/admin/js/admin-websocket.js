@@ -1,4 +1,5 @@
 import { WebSocketManager } from '../../shared/js/websocket-manager.js';
+import { setCabins } from '../../shared/js/cabins-store.js';
 
 let wsManager = new WebSocketManager('admin');
 
@@ -24,6 +25,10 @@ export function connectWebSocket() {
             if (typeof window.renderAdminTable === 'function') {
                 window.renderAdminTable();
             }
+        } else if (data.type === 'cabins_updated') {
+            if (data.cabins) setCabins(data.cabins);
+            if (typeof window.initBedsDisplay === 'function') window.initBedsDisplay();
+            if (typeof window.renderAdminTable === 'function') window.renderAdminTable();
         } else if (data.type === 'time_update') {
             if (typeof window.updateAdminTimers === 'function') {
                 window.updateAdminTimers();

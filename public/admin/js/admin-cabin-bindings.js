@@ -1,18 +1,19 @@
 import { apiRequest, showNotification } from './admin-utils.js';
-
-const CABIN_COUNT = 14;
+import { loadCabins, getCabinsSortedByNumber, getCabins, getCabinDisplayName } from '../../shared/js/cabins-store.js';
 
 function buildAllCabinsSet() {
   const set = new Set();
-  for (let i = 1; i <= CABIN_COUNT; i += 1) set.add(i);
+  const cabinCount = (getCabins() || []).length || 14;
+  for (let i = 1; i <= cabinCount; i += 1) set.add(i);
   return set;
 }
 
 function normalizeCabins(value) {
   if (!Array.isArray(value)) return null;
+  const cabinCount = (getCabins() || []).length || 14;
   const out = value
     .map((n) => parseInt(n, 10))
-    .filter((n) => Number.isFinite(n) && n >= 1 && n <= CABIN_COUNT);
+    .filter((n) => Number.isFinite(n) && n >= 1 && n <= cabinCount);
   return out.length ? out : [];
 }
 
@@ -113,14 +114,16 @@ function initCabinBindings() {
 
   async function openModal() {
     modal.style.display = 'flex';
+    await loadCabins().catch(() => {});
     cabinSelect.innerHTML = '';
-    for (let i = 1; i <= CABIN_COUNT; i += 1) {
+    const cabins = getCabinsSortedByNumber();
+    for (const c of cabins) {
       const opt = document.createElement('option');
-      opt.value = String(i);
-      opt.textContent = `Кабинка ${i}`;
+      opt.value = String(c.id);
+      opt.textContent = String(c.name || getCabinDisplayName(c.id));
       cabinSelect.appendChild(opt);
     }
-    cabinSelect.value = '1';
+    if (cabins.length) cabinSelect.value = String(cabins[0].id);
     searchEl.value = '';
     listEl.innerHTML = '';
     try {
@@ -133,12 +136,13 @@ function initCabinBindings() {
 
   async function saveChanges() {
     const allCabins = buildAllCabinsSet();
+    const cabinCount = (getCabins() || []).length || 14;
     const updates = procedures
       .filter((p) => p && p.id)
       .map((p) => {
         const set = allowedMap.get(p.id) || allCabins;
         const arr = toSortedArray(set);
-        const key = arr.length === CABIN_COUNT ? 'ALL' : arr.join(',');
+        const key = arr.length === cabinCount ? 'ALL' : arr.join(',');
         return { id: p.id, key, arr };
       })
       .filter((u) => u.key !== originalKeyMap.get(u.id));
@@ -153,7 +157,7 @@ function initCabinBindings() {
     saveBtn.textContent = 'Сохраняем...';
     try {
       for (const u of updates) {
-        const allowedCabins = (u.arr.length === CABIN_COUNT || u.arr.length === 0) ? [] : u.arr;
+        const allowedCabins = (u.arr.length === cabinCount || u.arr.length === 0) ? [] : u.arr;
         await apiRequest(`/api/procedures/${u.id}`, {
           method: 'PUT',
           body: JSON.stringify({ allowedCabins })

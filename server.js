@@ -8,7 +8,58 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = 3000;
-const MAX_BEDS = 14; // Настройка количества кабинок
+const MAX_BEDS = 100;
+
+const cabinsFile = path.join(__dirname, 'cabins.json');
+let cabins = [];
+
+function buildDefaultCabins(count) {
+    const out = [];
+    for (let i = 1; i <= count; i++) {
+        out.push({ id: i, number: i, name: `Кабинка ${i}` });
+    }
+    return out;
+}
+
+function loadCabins() {
+    if (!fs.existsSync(cabinsFile)) {
+        cabins = buildDefaultCabins(14);
+        fs.writeFileSync(cabinsFile, JSON.stringify(cabins, null, 2));
+        return;
+    }
+    try {
+        const raw = JSON.parse(fs.readFileSync(cabinsFile, 'utf8'));
+        if (Array.isArray(raw) && raw.length) {
+            cabins = raw
+                .map((c, idx) => ({
+                    id: Number.isFinite(parseInt(c.id, 10)) ? parseInt(c.id, 10) : (idx + 1),
+                    number: Number.isFinite(parseInt(c.number, 10)) ? parseInt(c.number, 10) : (idx + 1),
+                    name: String(c.name || '').trim() || `Кабинка ${Number.isFinite(parseInt(c.number, 10)) ? parseInt(c.number, 10) : (idx + 1)}`
+                }))
+                .filter(c => Number.isFinite(c.id) && c.id >= 1 && c.id <= MAX_BEDS)
+                .sort((a, b) => a.id - b.id);
+        } else {
+            cabins = buildDefaultCabins(14);
+        }
+    } catch {
+        cabins = buildDefaultCabins(14);
+    }
+}
+
+function saveCabins() {
+    fs.writeFileSync(cabinsFile, JSON.stringify(cabins, null, 2));
+}
+
+function getCabinCount() {
+    return Array.isArray(cabins) ? cabins.length : 0;
+}
+
+function getCabinNumberById(cabinId) {
+    const c = (cabins || []).find(x => x.id === cabinId);
+    return c && Number.isFinite(c.number) ? c.number : cabinId;
+}
+
+loadCabins();
 
 // CORS для локального тестирования
 app.use((req, res, next) => {
@@ -500,7 +551,8 @@ if (!fs.existsSync(logFile)) {
 function logEvent(bedId, event, duration, operator, procedureName) {
     const timestamp = new Date().toLocaleString('ru-RU');
     const [date, time] = timestamp.split(', ');
-    fs.appendFileSync(logFile, `${date},${time},${bedId},${event},${duration},${operator},${procedureName || '-'}\n`);
+    const cabinNumber = getCabinNumberById(bedId);
+    fs.appendFileSync(logFile, `${date},${time},${cabinNumber},${event},${duration},${operator},${procedureName || '-'}\n`);
 }
 
 // Справочник процедур
@@ -552,7 +604,7 @@ function saveProceduresToFile() {
     }
 }
 
-// Хранилище состояний таймеров (MAX_BEDS кабинок, индекс 1-MAX_BEDS)
+// Хранилище состояний таймеров (индекс 1..MAX_BEDS, активных: getCabinCount())
 const beds = Array(MAX_BEDS + 1).fill(null).map(() => ({
     status: 'idle',
     endTime: null,
@@ -573,7 +625,7 @@ app.post('/api/control', ensureAnyRole(['admin', 'doctor']), (req, res) => {
         : ((req.user && req.user.role === 'admin' && req.user.sub) ? req.user.sub : operator);
     const bedId = parseInt(bed);
     
-    if (bedId < 1 || bedId > MAX_BEDS) {
+    if (bedId < 1 || bedId > getCabinCount()) {
         return res.status(400).json({ error: 'Неверный номер кабинки' });
     }
 
@@ -591,7 +643,7 @@ app.post('/api/control', ensureAnyRole(['admin', 'doctor']), (req, res) => {
 
                 const proc = procedures.find(p => p.name === procedureName);
                 if (proc && !isProcedureAllowedInCabin(proc, bedId)) {
-                    return res.status(400).json({ error: `Процедура недоступна для кабинки ${bedId}` });
+                    return res.status(400).json({ error: `Процедура недоступна для кабинки ${getCabinNumberById(bedId)}` });
                 }
                 let duration = minutes;
                 let currentStageIndex = 0;
@@ -730,7 +782,56 @@ app.post('/api/control', ensureAnyRole(['admin', 'doctor']), (req, res) => {
 });
 
 app.get('/api/state', (req, res) => {
-    res.json({ beds: beds.slice(1, MAX_BEDS + 1) });
+    res.json({ beds: beds.slice(1, getCabinCount() + 1) });
+});
+
+app.get('/api/cabins', ensureAnyRole(['admin', 'doctor']), (req, res) => {
+    res.json({ cabins });
+});
+
+app.post('/api/cabins', ensureApiRole('admin'), (req, res) => {
+    const { number, name } = req.body || {};
+    const cabinNumber = parseInt(number, 10);
+    if (!Number.isFinite(cabinNumber) || cabinNumber < 1 || cabinNumber > 999) {
+        return res.status(400).json({ error: 'Некорректный номер кабинки' });
+    }
+    if ((cabins || []).some(c => parseInt(c.number, 10) === cabinNumber)) {
+        return res.status(400).json({ error: 'Кабинка с таким номером уже существует' });
+    }
+    const nextId = (cabins || []).length + 1;
+    if (nextId > MAX_BEDS) {
+        return res.status(400).json({ error: 'Достигнут лимит кабинок' });
+    }
+    const cabinName = String(name || '').trim() || `Кабинка ${cabinNumber}`;
+    const newCabin = { id: nextId, number: cabinNumber, name: cabinName };
+    cabins.push(newCabin);
+    saveCabins();
+    res.json({ success: true, cabin: newCabin, cabins });
+    broadcastCabins();
+    broadcastUpdate();
+});
+
+app.put('/api/cabins/:id', ensureApiRole('admin'), (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const index = (cabins || []).findIndex(c => c.id === id);
+    if (index === -1) return res.status(404).json({ error: 'Кабинка не найдена' });
+    const { number, name } = req.body || {};
+    if (number !== undefined) {
+        const cabinNumber = parseInt(number, 10);
+        if (!Number.isFinite(cabinNumber) || cabinNumber < 1 || cabinNumber > 999) {
+            return res.status(400).json({ error: 'Некорректный номер кабинки' });
+        }
+        const exists = (cabins || []).some(c => c.id !== id && parseInt(c.number, 10) === cabinNumber);
+        if (exists) return res.status(400).json({ error: 'Кабинка с таким номером уже существует' });
+        cabins[index].number = cabinNumber;
+    }
+    if (name !== undefined) {
+        cabins[index].name = String(name || '').trim() || `Кабинка ${cabins[index].number}`;
+    }
+    saveCabins();
+    res.json({ success: true, cabin: cabins[index], cabins });
+    broadcastCabins();
+    broadcastUpdate();
 });
 
 // ==================== API ДЛЯ СПРАВОЧНИКА ПРОЦЕДУР ====================
@@ -746,6 +847,11 @@ app.get('/api/procedures/active', (req, res) => {
 
 function broadcastProcedures() {
     const payload = JSON.stringify({ type: 'procedures_updated', procedures });
+    broadcastToRole(['admin', 'doctor'], payload);
+}
+
+function broadcastCabins() {
+    const payload = JSON.stringify({ type: 'cabins_updated', cabins });
     broadcastToRole(['admin', 'doctor'], payload);
 }
 
@@ -767,7 +873,8 @@ app.post('/api/procedures', (req, res) => {
     };
 
     const cabins = normalizeCabinsList(allowedCabins);
-    if (cabins !== null && cabins.length > 0 && cabins.length < MAX_BEDS) newProcedure.allowedCabins = cabins;
+    const cabinCount = getCabinCount();
+    if (cabins !== null && cabins.length > 0 && cabins.length < cabinCount) newProcedure.allowedCabins = cabins;
 
     if (Array.isArray(stages) && stages.length > 0) {
         newProcedure.stages = stages;
@@ -801,7 +908,8 @@ app.put('/api/procedures/:id', (req, res) => {
 
     if (allowedCabins !== undefined) {
         const cabins = normalizeCabinsList(allowedCabins);
-        if (cabins === null || cabins.length === 0 || cabins.length === MAX_BEDS) {
+        const cabinCount = getCabinCount();
+        if (cabins === null || cabins.length === 0 || cabins.length === cabinCount) {
             delete procedures[index].allowedCabins;
         } else {
             procedures[index].allowedCabins = cabins;
@@ -1089,15 +1197,20 @@ wss.on('connection', (ws, req) => {
 
     // Отправляем начальное состояние
     if (role === 'admin' || role === 'doctor') {
+        const cabinCount = getCabinCount();
         ws.send(JSON.stringify({
             type: 'state',
-            beds: beds.slice(1, MAX_BEDS + 1)
+            beds: beds.slice(1, cabinCount + 1)
+        }));
+        ws.send(JSON.stringify({
+            type: 'cabins_updated',
+            cabins: cabins
         }));
         ws.send(JSON.stringify({
             type: 'procedures_updated',
             procedures: procedures
         }));
-    } else if (bedId >= 1 && bedId <= MAX_BEDS) {
+    } else if (bedId >= 1 && bedId <= getCabinCount()) {
         ws.send(JSON.stringify({
             type: 'state',
             ...beds[bedId]
@@ -1127,9 +1240,10 @@ function broadcastToBed(bedId, payload) {
 }
 
 function broadcastUpdate() {
+    const cabinCount = getCabinCount();
     const payload = JSON.stringify({
         type: 'update_all',
-        beds: beds.slice(1, MAX_BEDS + 1)
+        beds: beds.slice(1, cabinCount + 1)
     });
     
     clients.forEach((info, ws) => {
@@ -1142,7 +1256,8 @@ function broadcastUpdate() {
 // Отправка обновления каждую секунду
 setInterval(() => {
     const now = Date.now();
-    const currentBeds = beds.slice(1, MAX_BEDS + 1);
+    const cabinCount = getCabinCount();
+    const currentBeds = beds.slice(1, cabinCount + 1);
 
     // Тик таймера для админов и врачей
     const timePayload = JSON.stringify({
@@ -1153,7 +1268,7 @@ setInterval(() => {
     broadcastToRole(['admin', 'doctor'], timePayload);
 
     // Обновляем состояние сервера и проверяем завершение
-    for (let i = 1; i <= MAX_BEDS; i++) {
+    for (let i = 1; i <= cabinCount; i++) {
         const bed = beds[i];
         if (!bed || bed.status !== 'running' || !bed.endTime) continue;
 

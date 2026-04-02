@@ -1,6 +1,7 @@
 import { getBedsState, sendControlCommand } from './doctor-websocket.js';
 import { getProcedureById } from './doctor-procedures.js';
 import { formatTime, getStatusText, getStatusClass, getProgress } from './doctor-utils.js';
+import { loadCabins, getCabinDisplayNumber, getCabinDisplayName, getCabinsSortedByNumber } from '../../shared/js/cabins-store.js';
 
 let selectedBedId = null;
 let selectedProcedureId = null; // ✅ НОВОЕ: ID выбранной процедуры
@@ -148,7 +149,11 @@ export function renderBedsGrid() {
     const allowedList = selectedProc && Array.isArray(selectedProc.allowedCabins) ? selectedProc.allowedCabins : null;
     const allowedSet = allowedList && allowedList.length ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
 
-    const bedIds = beds.map((_, idx) => idx + 1);
+    const sortedCabins = getCabinsSortedByNumber();
+    const bedIds = (sortedCabins && sortedCabins.length)
+        ? sortedCabins.map(c => parseInt(c.id, 10)).filter(n => Number.isFinite(n))
+        : beds.map((_, idx) => idx + 1);
+
     if (allowedSet) {
         bedIds.sort((a, b) => (allowedSet.has(b) ? 1 : 0) - (allowedSet.has(a) ? 1 : 0));
     }
@@ -175,7 +180,7 @@ export function renderBedsGrid() {
             <div class="bed-ring" style="--p:${progressPercent};">
               <div class="bed-number">
                 <span class="bed-label">Кабинка</span>
-                <span class="bed-id">${bedId}</span>
+                <span class="bed-id">${getCabinDisplayNumber(bedId)}</span>
               </div>
             </div>
             <div class="bed-status"><span class="status-chip ${bed.status}">${statusText}</span></div>
@@ -240,12 +245,12 @@ function getButtonsHTML(bed, bedId) {
     } else if (status === 'paused') {
         if (isStageCompleted && hasNextStage) {
             // ✅ Показываем "Следующий этап"
-            console.log(`DEBUG: Отображаем кнопку 'Следующий этап' для кабинки ${bedId}`);
+            console.log(`DEBUG: Отображаем кнопку 'Следующий этап' для кабинки ${getCabinDisplayNumber(bedId)}`);
             return `<button class="btn-next" onclick="event.stopPropagation(); window.handleNextStage(${bedId})">▶ Следующий этап</button>
                     <button class="btn-reset" onclick="event.stopPropagation(); window.handleReset(${bedId})">🔄 Сброс</button>`;
         } else {
             // Обычная пауза (без этапов или последний этап)
-            console.log(`DEBUG: Отображаем кнопку 'Продолжить' для кабинки ${bedId}`);
+            console.log(`DEBUG: Отображаем кнопку 'Продолжить' для кабинки ${getCabinDisplayNumber(bedId)}`);
             return `<button class="btn-start" onclick="event.stopPropagation(); window.handleResume(${bedId})">▶ Продолжить</button>
                     <button class="btn-reset" onclick="event.stopPropagation(); window.handleReset(${bedId})">🔄 Сброс</button>`;
         }
@@ -276,7 +281,7 @@ export function updateSidebar() {
     if (info) info.style.display = 'none';
     if (details) details.style.display = 'block';
     
-    if (selectedBedEl) selectedBedEl.textContent = `Кабинка ${selectedBedId}`;
+    if (selectedBedEl) selectedBedEl.textContent = getCabinDisplayName(selectedBedId);
 
     const beds = getBedsState();
     const bed = beds[selectedBedId - 1];
@@ -351,7 +356,7 @@ window.handleStart = (bedId) => {
     if (Array.isArray(proc.allowedCabins) && proc.allowedCabins.length) {
         const set = new Set(proc.allowedCabins.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n)));
         if (!set.has(bedId)) {
-            alert(`⚠️ Процедура недоступна для кабинки ${bedId}`);
+            alert(`⚠️ Процедура недоступна для кабинки ${getCabinDisplayNumber(bedId)}`);
             return;
         }
     }
@@ -385,7 +390,7 @@ window.handleResume = async (bedId) => {
 };
 
 window.handleReset = (bedId) => {
-    if (confirm('Сбросить таймер кабинки ' + bedId + '?')) {
+    if (confirm('Сбросить таймер кабинки ' + getCabinDisplayNumber(bedId) + '?')) {
         sendControlCommand(bedId, 'reset');
     }
 };
@@ -398,7 +403,7 @@ window.handleConfirmComplete = (bedId) => {
     
     // ✅ УБРАНО ОКНО ПОДТВЕРЖДЕНИЯ - сразу отправляем команду сброса
     sendControlCommand(bedId, 'reset');
-    addEventLog('reset', `Подтверждено завершение "${procName}" в кабинке ${bedId}`);
+    addEventLog('reset', `Подтверждено завершение "${procName}" в кабинке ${getCabinDisplayNumber(bedId)}`);
 };
 
 // ✅ НОВАЯ: функция для перехода к следующему этапу
@@ -418,6 +423,7 @@ window.clearEventsLog = clearEventsLog;
 
 // Загружаем логи при старте
 document.addEventListener('DOMContentLoaded', () => {
+    loadCabins().catch(() => {});
     loadEventsFromStorage();
 
     // ✅ Добавляем обработчик выбора процедуры

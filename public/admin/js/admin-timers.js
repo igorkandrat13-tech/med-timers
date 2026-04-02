@@ -1,12 +1,11 @@
 // ==================== УПРАВЛЕНИЕ ТАЙМЕРАМИ ====================
 import { formatTime, getStatusText, getStatusClass, getProgress, getProgressBarHTML } from './admin-utils.js';
 import { getBedsState } from './admin-websocket.js';
+import { loadCabins, getCabins, getCabinDisplayName } from '../../shared/js/cabins-store.js';
 
 // Глобальные переменные
 let procedures = [];
 let modalTargetBedId = null;
-
-const BED_COUNT = 14;
 
 // Экспорт для глобального доступа
 export function setGlobalProcedures(procList) {
@@ -22,25 +21,35 @@ export function initBedsDisplay() {
     const tbody = document.getElementById('beds-table-body');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
+    const render = () => {
+        const cabinCount = (getCabins() || []).length || 14;
+        tbody.innerHTML = '';
 
-    for (let i = 1; i <= BED_COUNT; i++) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>Кабинка #${i}</td>
-            <td id="bed-${i}-status" class="status-badge status-idle">Ожидание</td>
-            <td id="bed-${i}-timer-cell">
-                <span id="bed-${i}-timer">00:00</span>
-                <div id="bed-${i}-progress-container" class="progress-container">
-                    <div class="progress-bar idle" style="width: 0%"></div>
-                </div>
-            </td>
-            <td id="bed-${i}-procedure">-</td>
-            <td id="bed-${i}-duration">-</td>
-            <td id="bed-${i}-actions">-</td>
-        `;
-        tbody.appendChild(row);
-    }
+        for (let i = 1; i <= cabinCount; i++) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${getCabinDisplayName(i)}</td>
+                <td id="bed-${i}-status" class="status-badge status-idle">Ожидание</td>
+                <td id="bed-${i}-timer-cell">
+                    <span id="bed-${i}-timer">00:00</span>
+                    <div id="bed-${i}-progress-container" class="progress-container">
+                        <div class="progress-bar idle" style="width: 0%"></div>
+                    </div>
+                </td>
+                <td id="bed-${i}-procedure">-</td>
+                <td id="bed-${i}-duration">-</td>
+                <td id="bed-${i}-actions">-</td>
+            `;
+            tbody.appendChild(row);
+        }
+        const beds = getBedsState();
+        if (beds && Array.isArray(beds) && typeof window.renderAdminTable === 'function') {
+            window.renderAdminTable();
+        }
+    };
+
+    render();
+    loadCabins().then(render).catch(() => {});
 }
 
 export async function loadBedsState() {
