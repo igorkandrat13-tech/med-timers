@@ -35,8 +35,11 @@ function initCabinBindings() {
   const cabinSelect = document.getElementById('cabin-bindings-cabin');
   const searchEl = document.getElementById('cabin-bindings-search');
   const listEl = document.getElementById('cabin-bindings-list');
+  const selectAllBtn = document.getElementById('cabin-bindings-select-all');
+  const clearAllBtn = document.getElementById('cabin-bindings-clear-all');
+  const countEl = document.getElementById('cabin-bindings-count');
 
-  if (!openBtn || !modal || !saveBtn || !cabinSelect || !searchEl || !listEl) return;
+  if (!openBtn || !modal || !saveBtn || !cabinSelect || !searchEl || !listEl || !selectAllBtn || !clearAllBtn) return;
 
   let procedures = [];
   const allowedMap = new Map();
@@ -86,6 +89,12 @@ function initCabinBindings() {
       label.appendChild(document.createTextNode(` ${String(p.name || '')}`));
       listEl.appendChild(label);
     });
+
+    if (countEl) {
+      const total = list.length;
+      const checked = list.filter(p => isAllowedInCabin(p.id, cabinId)).length;
+      countEl.textContent = `${checked}/${total}`;
+    }
   }
 
   async function loadData() {
@@ -169,7 +178,32 @@ function initCabinBindings() {
   cabinSelect.addEventListener('change', renderList);
   searchEl.addEventListener('input', renderList);
   saveBtn.addEventListener('click', saveChanges);
+
+  selectAllBtn.addEventListener('click', () => {
+    const cabinId = getCabinId();
+    listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = true;
+      const procId = parseInt(cb.value, 10);
+      if (!Number.isFinite(procId)) return;
+      const set = allowedMap.get(procId) || buildAllCabinsSet();
+      set.add(cabinId);
+      allowedMap.set(procId, set);
+    });
+    renderList();
+  });
+
+  clearAllBtn.addEventListener('click', () => {
+    const cabinId = getCabinId();
+    listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = false;
+      const procId = parseInt(cb.value, 10);
+      if (!Number.isFinite(procId)) return;
+      const set = allowedMap.get(procId) || buildAllCabinsSet();
+      set.delete(cabinId);
+      allowedMap.set(procId, set);
+    });
+    renderList();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initCabinBindings);
-
