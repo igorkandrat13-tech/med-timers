@@ -9,7 +9,7 @@ const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = 3000;
-const MAX_BEDS = 14; // Настройка количества коек
+const MAX_BEDS = 14; // Настройка количества кабинок
 
 // CORS для локального тестирования
 app.use((req, res, next) => {
@@ -494,7 +494,7 @@ const logFile = path.join(__dirname, 'timers_log.csv');
 
 // Инициализация журнала
 if (!fs.existsSync(logFile)) {
-    fs.writeFileSync(logFile, 'Дата,Время,Койка,Событие,Длительность,Оператор,Процедура\n');
+    fs.writeFileSync(logFile, 'Дата,Время,Кабинка,Событие,Длительность,Оператор,Процедура\n');
 }
 
 // Вспомогательная функция логирования
@@ -513,6 +513,24 @@ let procedures = [
     { id: 4, name: 'Лазеротерапия', duration: 12, active: true },
     { id: 5, name: 'Дарсонвализация', duration: 8, active: true }
 ];
+
+function normalizeCabinsList(value) {
+    if (value === undefined || value === null) return null;
+    const arr = Array.isArray(value) ? value : [value];
+    const out = arr
+        .flatMap(v => String(v).split(','))
+        .map(s => parseInt(String(s).trim(), 10))
+        .filter(n => Number.isFinite(n) && n >= 1 && n <= MAX_BEDS);
+    return out.length ? Array.from(new Set(out)).sort((a, b) => a - b) : [];
+}
+
+function isProcedureAllowedInCabin(proc, cabinId) {
+    if (!proc) return true;
+    const list = normalizeCabinsList(proc.allowedCabins);
+    if (list === null) return true;
+    if (list.length === 0) return true;
+    return list.includes(cabinId);
+}
 
 if (fs.existsSync(proceduresFile)) {
     try {
@@ -535,7 +553,7 @@ function saveProceduresToFile() {
     }
 }
 
-// Хранилище состояний таймеров (MAX_BEDS коек, индекс 1-MAX_BEDS)
+// Хранилище состояний таймеров (MAX_BEDS кабинок, индекс 1-MAX_BEDS)
 const beds = Array(MAX_BEDS + 1).fill(null).map(() => ({
     status: 'idle',
     endTime: null,
@@ -557,22 +575,25 @@ app.post('/api/control', ensureAnyRole(['admin', 'doctor']), (req, res) => {
     const bedId = parseInt(bed);
     
     if (bedId < 1 || bedId > MAX_BEDS) {
-        return res.status(400).json({ error: 'Неверный номер койки' });
+        return res.status(400).json({ error: 'Неверный номер кабинки' });
     }
 
     const bedData = beds[bedId];
     if (!bedData) {
-        return res.status(400).json({ error: 'Койка не найдена' });
+        return res.status(400).json({ error: 'Кабинка не найдена' });
     }
 
     try {
         switch (action) {
             case 'start':
                 if (bedData.status !== 'idle') {
-                    return res.status(400).json({ error: 'Койка занята' });
+                    return res.status(400).json({ error: 'Кабинка занята' });
                 }
 
                 const proc = procedures.find(p => p.name === procedureName);
+                if (proc && !isProcedureAllowedInCabin(proc, bedId)) {
+                    return res.status(400).json({ error: `Процедура недоступна для кабинки ${bedId}` });
+                }
                 let duration = minutes;
                 let currentStageIndex = 0;
                 let stages = [];
@@ -730,7 +751,7 @@ function broadcastProcedures() {
 }
 
 app.post('/api/procedures', (req, res) => {
-    const { name, duration, stages } = req.body;
+    const { name, duration, stages, allowedCabins } = req.body;
     if (!name || !duration) {
         return res.status(400).json({ error: 'Название и длительность обязательны' });
     }
@@ -744,6 +765,9 @@ app.post('/api/procedures', (req, res) => {
         createdAt: new Date().toISOString()
     };
 
+    const cabins = normalizeCabinsList(allowedCabins);
+    if (cabins !== null) newProcedure.allowedCabins = cabins;
+
     if (Array.isArray(stages) && stages.length > 0) {
         newProcedure.stages = stages;
     }
@@ -756,7 +780,7 @@ app.post('/api/procedures', (req, res) => {
 
 app.put('/api/procedures/:id', (req, res) => {
     const procedureId = parseInt(req.params.id);
-    const { name, duration, active, stages } = req.body;
+    const { name, duration, active, stages, allowedCabins } = req.body;
     const index = procedures.findIndex(p => p.id === procedureId);
     if (index === -1) {
         return res.status(404).json({ error: 'Процедура не найдена' });
@@ -771,6 +795,15 @@ app.put('/api/procedures/:id', (req, res) => {
             procedures[index].stages = stages;
         } else {
             delete procedures[index].stages;
+        }
+    }
+
+    if (allowedCabins !== undefined) {
+        const cabins = normalizeCabinsList(allowedCabins);
+        if (cabins === null || cabins.length === 0) {
+            delete procedures[index].allowedCabins;
+        } else {
+            procedures[index].allowedCabins = cabins;
         }
     }
 
@@ -942,7 +975,7 @@ app.get('/api/logs.xlsx', ensureApiRole('admin'), async (req, res) => {
             { header: 'Дата', key: 'date', width: 12 },
             { header: 'Время начала', key: 'startTime', width: 12 },
             { header: 'Время конца', key: 'endTime', width: 12 },
-            { header: 'Койка', key: 'bed', width: 8 },
+            { header: 'Кабинка', key: 'bed', width: 9 },
             { header: 'Пользователь', key: 'user', width: 22 },
             { header: 'Процедура', key: 'proc', width: 34 },
             { header: 'План (мин)', key: 'planned', width: 12 },

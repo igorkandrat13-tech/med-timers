@@ -125,7 +125,7 @@ function initLogDownload() {
       cb.value = String(i);
       cb.addEventListener('change', updateLinks);
       label.appendChild(cb);
-      const text = document.createTextNode(` Койка ${i}`);
+      const text = document.createTextNode(` Кабинка ${i}`);
       label.appendChild(text);
       bedsBox.appendChild(label);
     }

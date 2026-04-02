@@ -143,11 +143,21 @@ export function renderBedsGrid() {
     }
     
     grid.innerHTML = '';
-    
-    beds.forEach((bed, index) => {
-        const bedId = index + 1;
+
+    const selectedProc = selectedProcedureId ? getProcedureById(selectedProcedureId) : null;
+    const allowedList = selectedProc && Array.isArray(selectedProc.allowedCabins) ? selectedProc.allowedCabins : null;
+    const allowedSet = allowedList && allowedList.length ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
+
+    const bedIds = beds.map((_, idx) => idx + 1);
+    if (allowedSet) {
+        bedIds.sort((a, b) => (allowedSet.has(b) ? 1 : 0) - (allowedSet.has(a) ? 1 : 0));
+    }
+
+    bedIds.forEach((bedId) => {
+        const bed = beds[bedId - 1];
         const card = document.createElement('div');
-        card.className = `bed-card ${bed.status} ${selectedBedId === bedId ? 'selected' : ''}`;
+        const notAllowed = allowedSet && !allowedSet.has(bedId);
+        card.className = `bed-card ${bed.status} ${notAllowed ? 'proc-not-allowed' : ''} ${selectedBedId === bedId ? 'selected' : ''}`;
         card.onclick = () => selectBed(bedId);
 
         const timerText = formatTime(bed);
@@ -164,7 +174,7 @@ export function renderBedsGrid() {
         card.innerHTML = `
             <div class="bed-ring" style="--p:${progressPercent};">
               <div class="bed-number">
-                <span class="bed-label">Койка</span>
+                <span class="bed-label">Кабинка</span>
                 <span class="bed-id">${bedId}</span>
               </div>
             </div>
@@ -218,19 +228,24 @@ function getButtonsHTML(bed, bedId) {
     //console.log(`DEBUG: isMultiStage=${isMultiStage}, hasNextStage=${hasNextStage}, isStageCompleted=${isStageCompleted}`);
 
     if (status === 'idle') {
-        return `<button class="btn-start" onclick="event.stopPropagation(); window.handleStart(${bedId})">▶ Старт</button>`;
+        const selectedProc = selectedProcedureId ? getProcedureById(selectedProcedureId) : null;
+        const allowedList = selectedProc && Array.isArray(selectedProc.allowedCabins) ? selectedProc.allowedCabins : null;
+        const allowedSet = allowedList && allowedList.length ? new Set(allowedList.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n))) : null;
+        const disabled = allowedSet && !allowedSet.has(bedId);
+        const title = disabled ? 'Процедура недоступна для этой кабинки' : '';
+        return `<button class="btn-start" ${disabled ? 'disabled' : ''} title="${title}" onclick="event.stopPropagation(); window.handleStart(${bedId})">▶ Старт</button>`;
     } else if (status === 'running') {
         return `<button class="btn-pause" onclick="event.stopPropagation(); window.handlePause(${bedId})">⏸ Пауза</button>
                 <button class="btn-reset" onclick="event.stopPropagation(); window.handleReset(${bedId})">🔄 Сброс</button>`;
     } else if (status === 'paused') {
         if (isStageCompleted && hasNextStage) {
             // ✅ Показываем "Следующий этап"
-            console.log(`DEBUG: Отображаем кнопку 'Следующий этап' для койки ${bedId}`);
+            console.log(`DEBUG: Отображаем кнопку 'Следующий этап' для кабинки ${bedId}`);
             return `<button class="btn-next" onclick="event.stopPropagation(); window.handleNextStage(${bedId})">▶ Следующий этап</button>
                     <button class="btn-reset" onclick="event.stopPropagation(); window.handleReset(${bedId})">🔄 Сброс</button>`;
         } else {
             // Обычная пауза (без этапов или последний этап)
-            console.log(`DEBUG: Отображаем кнопку 'Продолжить' для койки ${bedId}`);
+            console.log(`DEBUG: Отображаем кнопку 'Продолжить' для кабинки ${bedId}`);
             return `<button class="btn-start" onclick="event.stopPropagation(); window.handleResume(${bedId})">▶ Продолжить</button>
                     <button class="btn-reset" onclick="event.stopPropagation(); window.handleReset(${bedId})">🔄 Сброс</button>`;
         }
@@ -261,7 +276,7 @@ export function updateSidebar() {
     if (info) info.style.display = 'none';
     if (details) details.style.display = 'block';
     
-    if (selectedBedEl) selectedBedEl.textContent = `Койка ${selectedBedId}`;
+    if (selectedBedEl) selectedBedEl.textContent = `Кабинка ${selectedBedId}`;
 
     const beds = getBedsState();
     const bed = beds[selectedBedId - 1];
@@ -332,6 +347,14 @@ window.handleStart = (bedId) => {
         alert('⚠️ Процедура не найдена');
         return;
     }
+
+    if (Array.isArray(proc.allowedCabins) && proc.allowedCabins.length) {
+        const set = new Set(proc.allowedCabins.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n)));
+        if (!set.has(bedId)) {
+            alert(`⚠️ Процедура недоступна для кабинки ${bedId}`);
+            return;
+        }
+    }
     
     // Отправляем команду на сервер
     sendControlCommand(bedId, 'start', proc.duration, proc.name);
@@ -362,7 +385,7 @@ window.handleResume = async (bedId) => {
 };
 
 window.handleReset = (bedId) => {
-    if (confirm('Сбросить таймер койки ' + bedId + '?')) {
+    if (confirm('Сбросить таймер кабинки ' + bedId + '?')) {
         sendControlCommand(bedId, 'reset');
     }
 };
@@ -375,7 +398,7 @@ window.handleConfirmComplete = (bedId) => {
     
     // ✅ УБРАНО ОКНО ПОДТВЕРЖДЕНИЯ - сразу отправляем команду сброса
     sendControlCommand(bedId, 'reset');
-    addEventLog('reset', `Подтверждено завершение "${procName}" на койке ${bedId}`);
+    addEventLog('reset', `Подтверждено завершение "${procName}" в кабинке ${bedId}`);
 };
 
 // ✅ НОВАЯ: функция для перехода к следующему этапу
@@ -403,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
         procSelect.onchange = (e) => {
             selectedProcedureId = e.target.value; // ✅ Сохраняем выбранную процедуру
             console.log('Выбрана процедура ID:', selectedProcedureId);
+            renderBedsGrid();
         };
     }
 });

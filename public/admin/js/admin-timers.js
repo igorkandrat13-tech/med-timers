@@ -27,7 +27,7 @@ export function initBedsDisplay() {
     for (let i = 1; i <= BED_COUNT; i++) {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>Койка #${i}</td>
+            <td>Кабинка #${i}</td>
             <td id="bed-${i}-status" class="status-badge status-idle">Ожидание</td>
             <td id="bed-${i}-timer-cell">
                 <span id="bed-${i}-timer">00:00</span>
@@ -185,13 +185,19 @@ export function openSelectProcedureModal(bedId) {
     }
 
      // ✅ Наполняем селект
-    populateProcedureSelect(select, durationInput);
+    populateProcedureSelect(select, durationInput, modalTargetBedId);
     document.getElementById('select-procedure-modal').style.display = 'flex';
 }
 
-function populateProcedureSelect(select, durationInput) {
+function populateProcedureSelect(select, durationInput, bedId) {
     select.innerHTML = '<option value="">-- Выберите процедуру --</option>';
-    const activeProcs = procedures.filter(p => p.active);
+    const activeProcs = procedures
+        .filter(p => p.active)
+        .filter(p => {
+            if (!bedId) return true;
+            if (!Array.isArray(p.allowedCabins) || p.allowedCabins.length === 0) return true;
+            return p.allowedCabins.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n)).includes(bedId);
+        });
 
     activeProcs.forEach(proc => {
         const opt = document.createElement('option');
@@ -258,7 +264,7 @@ export async function launchProcedureOnBed() {
         });
         closeSelectProcedureModal();
         if (typeof window.addEventLog === 'function') {
-            window.addEventLog('start', `Запущена "${proc.name}" на койке ${modalTargetBedId}`);
+            window.addEventLog('start', `Запущена "${proc.name}" в кабинке ${modalTargetBedId}`);
         }
     } catch (e) {
         alert('Ошибка запуска процедуры');
@@ -336,7 +342,7 @@ window.handleConfirmComplete = async (bedId) => {
 };
 
 window.handleReset = async (bedId) => {
-    if (!confirm(`Сбросить койку ${bedId}?`)) return;
+    if (!confirm(`Сбросить кабинку ${bedId}?`)) return;
     try {
         await fetch('/api/control', {
             method: 'POST',

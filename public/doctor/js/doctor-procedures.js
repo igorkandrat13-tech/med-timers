@@ -108,10 +108,20 @@ function renderProcedureDropdownOptions(query) {
     const select = document.getElementById('global-procedure-select');
     if (!optionsEl || !select) return;
 
+    const q = String(query || '').trim().toLowerCase();
     const list = (globalProcedures || [])
         .filter(p => p && p.active)
-        .filter(p => !query || String(p.name || '').toLowerCase().includes(query))
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+        .filter(p => !q || String(p.name || '').toLowerCase().includes(q))
+        .sort((a, b) => {
+            const an = String(a.name || '');
+            const bn = String(b.name || '');
+            if (q) {
+                const ai = an.toLowerCase().indexOf(q);
+                const bi = bn.toLowerCase().indexOf(q);
+                if (ai !== bi) return ai - bi;
+            }
+            return an.localeCompare(bn, 'ru');
+        });
 
     optionsEl.innerHTML = '';
 

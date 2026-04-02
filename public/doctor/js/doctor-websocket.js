@@ -123,7 +123,7 @@ function handleStageCompleted(data, bedsState) {
     if (typeof window.addEventLog === 'function') {
         const bed = bedsState[bedId - 1];
         const procName = bed?.procedureName || 'процедура';
-        window.addEventLog('stage_completed', `Этап ${currentStage} из ${totalStages} завершён (${procName}) на койке ${bedId}`);
+        window.addEventLog('stage_completed', `Этап ${currentStage} из ${totalStages} завершён (${procName}) в кабинке ${bedId}`);
     }
 }
 
@@ -175,21 +175,21 @@ function handleStatusChange(bed, bedId, prevBed) {
     switch(bed.status) {
         case 'running':
             if (prevBed.status === 'idle') {
-                window.addEventLog('start', `Запущена "${procName}" на койке ${bedId}`);
+                window.addEventLog('start', `Запущена "${procName}" в кабинке ${bedId}`);
             } else if (prevBed.status === 'paused') {
-                window.addEventLog('resume', `Возобновлена "${procName}" на койке ${bedId}`);
+                window.addEventLog('resume', `Возобновлена "${procName}" в кабинке ${bedId}`);
             }
             break;
         case 'paused':
-            window.addEventLog('pause', `Пауза "${procName}" на койке ${bedId}`);
+            window.addEventLog('pause', `Пауза "${procName}" в кабинке ${bedId}`);
             break;
         case 'idle':
             if (prevBed.status === 'completed' || prevBed.status === 'running') {
-                window.addEventLog('reset', `Сброшена койка ${bedId}`);
+                window.addEventLog('reset', `Сброшена кабинка ${bedId}`);
             }
             break;
         case 'completed':
-            window.addEventLog('completed', `Завершена "${procName}" на койке ${bedId}`);
+            window.addEventLog('completed', `Завершена "${procName}" в кабинке ${bedId}`);
             break;
     }
 }
@@ -199,7 +199,7 @@ function showCompletionNotification(procedureName, bedId) {
     const text = document.getElementById('completion-text');
     
     if (notification && text) {
-        text.textContent = `Процедура "${procedureName}" на койке ${bedId} завершена!`;
+        text.textContent = `Процедура "${procedureName}" в кабинке ${bedId} завершена!`;
         notification.style.display = 'flex';
         setTimeout(() => window.closeCompletionNotification(), 10000);
     }
@@ -231,7 +231,7 @@ export async function sendControlCommand(bedId, action, minutes = 0, procedureNa
             window.showNotification('Нет соединения. Команда поставлена в очередь.', 'warning');
         }
         if (typeof window.addEventLog === 'function') {
-            window.addEventLog('info', `Команда в очереди: ${action} (койка ${bedId})`);
+            window.addEventLog('info', `Команда в очереди: ${action} (кабинка ${bedId})`);
         }
         return;
     }

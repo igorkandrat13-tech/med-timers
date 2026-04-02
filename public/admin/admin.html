@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="header">
-    <h1>🕗 Панель управления таймерами (14 коек)</h1>
+    <h1>🕗 Панель управления таймерами (14 кабинок)</h1>
     <div class="header-actions">
   <span id="connection-status">🟢 Подключено</span>
   <button class="btn btn-download" id="download-log-btn">📥 Скачать журнал</button>
@@ -28,11 +28,11 @@
 
   <main class="main">
     <section class="beds-section">
-      <h2>Состояние коек</h2>
+      <h2>Состояние кабинок</h2>
       <table>
         <thead>
           <tr>
-            <th>Койка</th>
+            <th>Кабинка</th>
             <th>Статус</th>
             <th>Осталось</th>
             <th>Процедура</th>
@@ -61,6 +61,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Название</th>
+                        <th>Кабинки</th>
                         <th>Длительность</th>
                         <th>Статус</th>
                         <th>Дата</th>
@@ -132,7 +133,7 @@
         <button class="btn btn-reset" id="log-preset-prev-month" type="button">Прошлый месяц</button>
       </div>
       <div class="form-group">
-        <label>Койки</label>
+        <label>Кабинки</label>
         <div id="log-beds"></div>
         <div style="margin-top:6px; display:flex; gap:8px;">
           <button class="btn btn-reset" id="log-bed-select-all" type="button">Выбрать все</button>
@@ -223,6 +224,17 @@
                 <label>Название процедуры *</label>
                 <input type="text" id="add-procedure-name" placeholder="Например: Электрофорез" required>
             </div>
+            <div class="form-group">
+                <label>Кабинки</label>
+                <div id="add-procedure-cabins" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                <div style="margin-top:6px; display:flex; gap:8px;">
+                    <button class="btn btn-reset" id="add-proc-cabins-all" type="button">Выбрать все</button>
+                    <button class="btn btn-cancel" id="add-proc-cabins-clear" type="button">Очистить</button>
+                </div>
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Если не выбрано ничего или выбраны все — процедура доступна во всех кабинках.
+                </small>
+            </div>
 
             <!-- ✅ УБРАН ЧЕКБОКС - ТЕПЕРЬ ВСЕГДА ЕСТЬ ЭТАПЫ -->
             <div id="stages-container" style="margin-top: 15px; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; background: #f9fafb;">
@@ -261,6 +273,17 @@
                 <label>Название процедуры</label>
                 <input type="text" id="edit-procedure-name" required>
             </div>
+            <div class="form-group">
+                <label>Кабинки</label>
+                <div id="edit-procedure-cabins" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                <div style="margin-top:6px; display:flex; gap:8px;">
+                    <button class="btn btn-reset" id="edit-proc-cabins-all" type="button">Выбрать все</button>
+                    <button class="btn btn-cancel" id="edit-proc-cabins-clear" type="button">Очистить</button>
+                </div>
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Если не выбрано ничего или выбраны все — процедура доступна во всех кабинках.
+                </small>
+            </div>
 
             <!-- ✅ УБРАН ЧЕКБОКС - КОНТЕЙНЕР ЭТАПОВ ВСЕГДА ВИДИМ -->
             <div id="edit-stages-container" style="margin-top: 15px; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; background: #f9fafb;">
@@ -295,7 +318,7 @@
 <div id="select-procedure-modal" class="modal" style="display: none;">
   <div class="modal-content modal-small">
     <div class="modal-header">
-      <h2>▶ Запуск процедуры на койке <span id="modal-bed-id">N</span></h2>
+      <h2>▶ Запуск процедуры в кабинке <span id="modal-bed-id">N</span></h2>
       <button class="modal-close" id="select-procedure-close-x">×</button>
     </div>
     <div class="modal-body">

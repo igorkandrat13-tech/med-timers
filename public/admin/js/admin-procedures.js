@@ -1,6 +1,8 @@
 // ==================== УПРАВЛЕНИЕ ПРОЦЕДУРАМИ ====================
 import { apiRequest, showNotification } from './admin-utils.js';
 
+const CABIN_COUNT = 14;
+
 export async function loadProcedures() {
     try {
         const procedures = await apiRequest('/api/procedures');
@@ -18,9 +20,13 @@ function renderProceduresTable(procedures) {
         const tr = document.createElement('tr');
         // Проверка на наличие stages для отображения иконки
         const hasStagesIcon = proc.stages && proc.stages.length > 0 ? ' 📋 ' : '';
+        const cabins = Array.isArray(proc.allowedCabins) && proc.allowedCabins.length
+            ? proc.allowedCabins.join(', ')
+            : 'Все';
         tr.innerHTML = `
             <td>${proc.id}</td>
             <td>${hasStagesIcon}${proc.name}</td>
+            <td>${cabins}</td>
             <!-- ✅ ИСПРАВЛЕНО: используем toFixed(1) для отображения дробей -->
             <td>${parseFloat(proc.duration).toFixed(1)}</td>
             <td>${proc.active ? ' ✅ Активна' : ' ❌ Неактивна'}</td>
@@ -34,12 +40,59 @@ function renderProceduresTable(procedures) {
     });
 }
 
+function renderCabins(container, selected) {
+    if (!container) return;
+    container.innerHTML = '';
+    const selectedSet = selected ? new Set(selected) : null;
+    for (let i = 1; i <= CABIN_COUNT; i += 1) {
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = String(i);
+        cb.checked = selectedSet ? selectedSet.has(i) : true;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(` Кабинка ${i}`));
+        container.appendChild(label);
+    }
+}
+
+function getSelectedCabins(container) {
+    if (!container) return [];
+    const out = [];
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (cb.checked) out.push(parseInt(cb.value, 10));
+    });
+    return out.filter(n => Number.isFinite(n));
+}
+
+function initCabinsActions(containerId, allBtnId, clearBtnId) {
+    const box = document.getElementById(containerId);
+    const allBtn = document.getElementById(allBtnId);
+    const clearBtn = document.getElementById(clearBtnId);
+    if (!box || !allBtn || !clearBtn) return;
+    if (!allBtn._cab) {
+        allBtn._cab = true;
+        allBtn.addEventListener('click', () => {
+            box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+        });
+    }
+    if (!clearBtn._cab) {
+        clearBtn._cab = true;
+        clearBtn.addEventListener('click', () => {
+            box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        });
+    }
+}
+
 // Глобальные функции
 window.loadProcedures = loadProcedures;
 
 // --- ЛОГИКА ДОБАВЛЕНИЯ ---
 window.openAddProcedureModal = () => {
     document.getElementById('add-procedure-modal').style.display = 'flex';
+    renderCabins(document.getElementById('add-procedure-cabins'));
+    initCabinsActions('add-procedure-cabins', 'add-proc-cabins-all', 'add-proc-cabins-clear');
     // Автоматически добавляем первый этап при открытии
     const container = document.getElementById('stages-container');
     if (container.children.length === 1) { // Только кнопка
@@ -52,6 +105,8 @@ window.closeAddProcedureModal = () => {
     // Очистка полей
     document.getElementById('add-procedure-name').value = '';
     document.getElementById('add-procedure-duration').value = '';
+    const cabins = document.getElementById('add-procedure-cabins');
+    if (cabins) cabins.innerHTML = '';
     document.getElementById('stages-container').innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><strong>Этапы:</strong><button type="button" onclick="addStage()" style="background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">+ Добавить этап</button></div>';
 };
 
@@ -88,6 +143,9 @@ window.saveProcedure = async () => {
         });
         duration += stageDurationVal;
     });
+
+    const selectedCabins = getSelectedCabins(document.getElementById('add-procedure-cabins'));
+    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === CABIN_COUNT) ? [] : selectedCabins;
     
     try {
         await apiRequest('/api/procedures', {
@@ -95,7 +153,8 @@ window.saveProcedure = async () => {
             body: JSON.stringify({
                 name,
                 duration: parseFloat(duration.toFixed(2)), // Отправляем дробное число
-                stages: stages // Теперь отправляем всегда
+                stages: stages, // Теперь отправляем всегда
+                allowedCabins
             })
         });
         closeAddProcedureModal();
@@ -147,6 +206,10 @@ window.editProcedure = async (id) => {
     document.getElementById('edit-procedure-duration').value = parseFloat(proc.duration).toFixed(1); 
     
     document.getElementById('edit-procedure-active').value = proc.active ? 'true' : 'false';
+
+    const allowed = Array.isArray(proc.allowedCabins) && proc.allowedCabins.length ? proc.allowedCabins : null;
+    renderCabins(document.getElementById('edit-procedure-cabins'), allowed);
+    initCabinsActions('edit-procedure-cabins', 'edit-proc-cabins-all', 'edit-proc-cabins-clear');
     
     const stagesContainer = document.getElementById('edit-stages-container');
     // Очищаем контейнер, но оставляем кнопку
@@ -164,6 +227,8 @@ window.editProcedure = async (id) => {
 
 window.closeEditProcedureModal = () => {
     document.getElementById('edit-procedure-modal').style.display = 'none';
+    const cabins = document.getElementById('edit-procedure-cabins');
+    if (cabins) cabins.innerHTML = '';
 };
 
 window.updateProcedure = async () => {
@@ -200,6 +265,9 @@ window.updateProcedure = async () => {
         });
         duration += stageDurationVal;
     });
+
+    const selectedCabins = getSelectedCabins(document.getElementById('edit-procedure-cabins'));
+    const allowedCabins = (selectedCabins.length === 0 || selectedCabins.length === CABIN_COUNT) ? [] : selectedCabins;
     
     try {
         await apiRequest(`/api/procedures/${id}`, {
@@ -208,7 +276,8 @@ window.updateProcedure = async () => {
                 name,
                 duration: parseFloat(duration.toFixed(2)), // Отправляем дробное число
                 stages: stages, // Теперь отправляем всегда
-                active
+                active,
+                allowedCabins
             })
         });
         closeEditProcedureModal();
