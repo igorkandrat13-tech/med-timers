@@ -7,11 +7,18 @@ let sortDir = 'asc';
 
 export async function loadProcedures() {
     try {
+        await loadCabins().catch(() => {});
         const procedures = await apiRequest('/api/procedures');
         renderProceduresTable(procedures);
     } catch (error) {
         console.error('Ошибка загрузки процедур:', error);
     }
+}
+
+function getCabinsText(proc) {
+    if (!proc || !Array.isArray(proc.allowedCabins)) return 'Все';
+    if (proc.allowedCabins.length === 0) return 'Нет';
+    return proc.allowedCabins.map((id) => getCabinDisplayName(id)).join(', ');
 }
 
 function sortProceduresForDisplay(procedures) {
@@ -27,8 +34,8 @@ function sortProceduresForDisplay(procedures) {
             const ba = b.active ? 1 : 0;
             if (aa !== ba) return (ba - aa) * dir;
         } else if (sortKey === 'cabins') {
-            const ac = Array.isArray(a.allowedCabins) && a.allowedCabins.length ? a.allowedCabins.join(',') : 'Все';
-            const bc = Array.isArray(b.allowedCabins) && b.allowedCabins.length ? b.allowedCabins.join(',') : 'Все';
+            const ac = getCabinsText(a);
+            const bc = getCabinsText(b);
             const c = ac.localeCompare(bc, 'ru');
             if (c !== 0) return c * dir;
         } else {
@@ -51,9 +58,7 @@ function renderProceduresTable(procedures) {
         const tr = document.createElement('tr');
         // Проверка на наличие stages для отображения иконки
         const hasStagesIcon = proc.stages && proc.stages.length > 0 ? ' 📋 ' : '';
-        const cabins = Array.isArray(proc.allowedCabins)
-            ? (proc.allowedCabins.length ? proc.allowedCabins.join(', ') : 'Нет')
-            : 'Все';
+        const cabins = getCabinsText(proc);
         tr.innerHTML = `
             <td>${proc.id}</td>
             <td>${hasStagesIcon}${proc.name}</td>
