@@ -1,5 +1,6 @@
 import { apiRequest, showNotification } from './admin-utils.js';
 import { loadCabins, getCabinsSortedByNumber } from '../../shared/js/cabins-store.js';
+import { updatePageTitle } from './admin-app.js';
 
 function initCabinsModal() {
   const openBtn = document.getElementById('cabins-btn');
@@ -61,6 +62,7 @@ function initCabinsModal() {
       addNameEl.value = '';
       await loadCabins().catch(() => {});
       renderList();
+      updatePageTitle();
       if (typeof window.initBedsDisplay === 'function') {
         window.initBedsDisplay();
       }
